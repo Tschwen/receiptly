@@ -1,0 +1,17 @@
+# Runtime data — never commit
+/data/
+
+# VS Code (keep launch.json, ignore user-specific settings)
+.vscode/settings.json
+.vscode/extensions.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# OS
+.DS_Store

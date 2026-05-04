@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Receipt">
+<meta name="theme-color" content="#3a2e22">
+<title>Receipt</title>
+<style>
+  :root {
+    --bark:#3a2e22; --clay:#7a5c42; --ochre:#b8842a;
+    --sand:#d4c4a0; --linen:#f5f0e8; --white:#fff;
+    --red:#c0392b; --green:#4a7c59; --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:'Georgia',serif;background:var(--linen);color:var(--bark);min-height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
+
+  header{background:var(--bark);color:var(--linen);padding:52px 24px 20px;padding-top:calc(52px + env(safe-area-inset-top))}
+  header .eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--sand);margin-bottom:4px}
+  header h1{font-size:26px;font-weight:normal;letter-spacing:.03em}
+  header .sub{font-size:12px;color:var(--sand);margin-top:3px;font-style:italic}
+
+  main{padding:20px 16px 110px;max-width:520px;margin:0 auto}
+  .section-label{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--clay);margin:22px 0 8px}
+  .field{background:var(--white);border:1.5px solid var(--sand);border-radius:var(--radius);padding:14px 16px;font-family:'Georgia',serif;font-size:16px;color:var(--bark);width:100%;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none}
+  .field:focus{border-color:var(--ochre);box-shadow:0 0 0 3px rgba(184,132,42,.15)}
+  .divider{height:1px;background:var(--sand);margin:22px 0}
+
+  .service-list{display:flex;flex-direction:column;gap:8px}
+  .service-item{display:flex;align-items:center;gap:12px;background:var(--white);border:1.5px solid var(--sand);border-radius:var(--radius);padding:12px 14px;transition:border-color .15s,background .15s;cursor:pointer;user-select:none}
+  .service-item.selected{border-color:var(--ochre);background:#fdf7ec}
+  .service-checkbox{width:24px;height:24px;flex-shrink:0;border:2px solid var(--sand);border-radius:6px;background:var(--white);display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:14px;color:transparent}
+  .service-item.selected .service-checkbox{background:var(--ochre);border-color:var(--ochre);color:white}
+  .service-info{flex:1;min-width:0}
+  .service-name{font-size:14px;color:var(--bark);line-height:1.3}
+  .service-price{font-size:12px;color:var(--clay);margin-top:2px}
+  .service-qty{display:none;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+  .service-item.selected .service-qty{display:flex}
+  .qty-label{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--clay)}
+  .qty-input{width:54px;text-align:center;padding:7px 4px;border:1.5px solid var(--ochre);border-radius:8px;font-family:'Georgia',serif;font-size:18px;font-weight:bold;color:var(--bark);background:var(--white);outline:none;-webkit-appearance:none;appearance:none}
+  .qty-stepper{display:flex;gap:4px}
+  .step-btn{width:24px;height:24px;border:1px solid var(--sand);border-radius:6px;background:var(--linen);font-size:16px;cursor:pointer;color:var(--bark);display:flex;align-items:center;justify-content:center;line-height:1}
+  .step-btn:active{background:var(--sand)}
+
+  .toggle-group{display:flex;gap:8px}
+  .toggle-btn{flex:1;padding:13px;border:1.5px solid var(--sand);border-radius:var(--radius);background:var(--white);color:var(--clay);font-family:'Georgia',serif;font-size:14px;cursor:pointer;transition:all .15s;text-align:center}
+  .toggle-btn.active{background:var(--bark);border-color:var(--bark);color:var(--white)}
+
+  .optional-toggle{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+  .optional-toggle input[type=checkbox]{width:20px;height:20px;accent-color:var(--ochre);cursor:pointer}
+  .optional-toggle span{font-size:13px;color:var(--clay)}
+
+  .summary-card{background:var(--bark);color:var(--linen);border-radius:var(--radius);padding:18px 20px;margin-top:24px;display:none}
+  .summary-card.visible{display:block}
+  .sum-header{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sand);margin-bottom:10px}
+  .sum-pos{display:flex;justify-content:space-between;font-size:13px;color:rgba(245,240,232,.85);padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+  .sum-pos:last-of-type{border-bottom:none}
+  .sum-pos .pos-name{flex:1;padding-right:8px}
+  .sum-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.2)}
+  .sum-total .lbl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--sand)}
+  .sum-total .val{font-size:28px;color:var(--white)}
+
+  .actions{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));background:rgba(245,240,232,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--sand);display:flex;gap:10px}
+  .btn{flex:1;padding:16px;border:none;border-radius:var(--radius);font-family:'Georgia',serif;font-size:15px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn-primary{background:var(--bark);color:var(--white)}
+  .btn-primary:active{background:var(--clay);transform:scale(.98)}
+  .btn-primary:disabled{background:var(--sand);color:var(--clay);cursor:default;transform:none}
+  .btn-secondary{background:var(--white);color:var(--bark);border:1.5px solid var(--sand);flex:0 0 auto;padding:16px 20px}
+  .btn-secondary:active{background:var(--sand)}
+
+  .success-overlay{position:fixed;inset:0;background:rgba(58,46,34,.85);display:none;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(4px)}
+  .success-overlay.show{display:flex}
+  .success-card{background:var(--white);border-radius:20px;padding:36px 32px;text-align:center;max-width:320px;margin:16px}
+  .success-icon{font-size:48px;margin-bottom:16px}
+  .success-nr{font-size:22px;color:var(--bark);margin-bottom:8px}
+  .success-sub{font-size:13px;color:var(--clay);margin-bottom:24px;line-height:1.5}
+  .success-btns{display:flex;flex-direction:column;gap:10px}
+  .success-btn{padding:14px;border-radius:var(--radius);font-family:'Georgia',serif;font-size:15px;cursor:pointer;border:none;transition:all .15s}
+  .success-btn-primary{background:var(--bark);color:var(--white)}
+  .success-btn-secondary{background:var(--linen);color:var(--bark);border:1.5px solid var(--sand)}
+
+  .toast{position:fixed;top:calc(20px + env(safe-area-inset-top));left:50%;transform:translateX(-50%) translateY(-80px);background:var(--green);color:white;padding:12px 24px;border-radius:100px;font-size:14px;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;z-index:100}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .toast.error{background:var(--red)}
+
+  .spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow" id="hdr-business">…</div>
+  <h1>New Receipt</h1>
+  <p class="sub" id="hdr-owner">…</p>
+</header>
+
+<main>
+  <div class="section-label">Date</div>
+  <input class="field" type="date" id="date-input" />
+
+  <div class="divider"></div>
+
+  <div class="section-label">Services</div>
+  <div class="service-list" id="service-list"></div>
+
+  <div style="margin-top:12px">
+    <label class="optional-toggle">
+      <input type="checkbox" id="travel-toggle" onchange="toggleTravel()" />
+      <span>Add travel costs</span>
+    </label>
+    <div id="travel-wrap" style="display:none;margin-top:12px">
+      <div class="section-label">Kilometers</div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <input class="field" type="number" id="travel-km" placeholder="e.g. 24"
+               min="1" step="1" inputmode="numeric" style="flex:1"
+               oninput="updateSummary()" onchange="updateSummary()" />
+        <div style="background:var(--linen);border:1.5px solid var(--sand);border-radius:var(--radius);padding:14px 16px;white-space:nowrap;font-size:13px;color:var(--clay)">
+          = <strong id="travel-amount" style="color:var(--bark)">—</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-label">Payment method</div>
+  <div class="toggle-group">
+    <button class="toggle-btn active" onclick="setPayment('Cash',this)">💵 Cash</button>
+    <button class="toggle-btn" onclick="setPayment('Bank Transfer',this)">🏦 Bank Transfer</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-label">Customer name</div>
+  <input class="field" type="text" id="customer" placeholder="First Last" />
+
+  <div class="summary-card" id="summary">
+    <div class="sum-header">Summary</div>
+    <div id="sum-items"></div>
+    <div class="sum-total">
+      <span class="lbl">Total received</span>
+      <span class="val" id="s-total">—</span>
+    </div>
+  </div>
+</main>
+
+<div class="actions">
+  <button class="btn btn-secondary" onclick="resetForm()">↺</button>
+  <button class="btn btn-primary" id="save-btn" onclick="submitReceipt()" disabled>
+    Save receipt
+  </button>
+</div>
+
+<!-- Success overlay -->
+<div class="success-overlay" id="success-overlay">
+  <div class="success-card">
+    <div class="success-icon">✓</div>
+    <div class="success-nr" id="success-nr">Receipt saved</div>
+    <div class="success-sub" id="success-sub">PDF and CSV saved on server.</div>
+    <div class="success-btns">
+      <button class="success-btn success-btn-primary" id="success-pdf-btn">Open PDF</button>
+      <button class="success-btn success-btn-secondary" onclick="closeSuccess()">New receipt</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let ITEMS = [];
+let TRAVEL_RATE = 0.41;
+let currentPayment = 'Cash';
+
+window.addEventListener('load', async () => {
+  const today = new Date().toISOString().split('T')[0];
+  const dateEl = document.getElementById('date-input');
+  dateEl.valueAsDate = new Date();
+  dateEl.max = today;
+  await Promise.all([loadItems(), loadConfig()]);
+});
+
+async function loadConfig() {
+  try {
+    const res = await fetch('/api/config');
+    const cfg = await res.json();
+    document.getElementById('hdr-business').textContent = cfg.business_name || '';
+    document.getElementById('hdr-owner').textContent =
+      (cfg.owner_name || '') + (cfg.city ? ' · ' + cfg.city : '');
+  } catch(_) {}
+}
+
+async function loadItems() {
+  try {
+    const [itemsRes, travelRes] = await Promise.all([
+      fetch('/api/items'),
+      fetch('/api/travel'),
+    ]);
+    ITEMS = (await itemsRes.json()).filter(i => i.active);
+    TRAVEL_RATE = (await travelRes.json()).rate;
+    buildList();
+  } catch(e) {
+    toast('Could not load price list', true);
+  }
+}
+
+function buildList() {
+  const container = document.getElementById('service-list');
+  ITEMS.forEach((item, idx) => {
+    const el = document.createElement('div');
+    el.className = 'service-item';
+    el.dataset.idx = idx;
+    el.innerHTML = `
+      <div class="service-checkbox">✓</div>
+      <div class="service-info">
+        <div class="service-name">${item.name}</div>
+        <div class="service-price">${fmt(item.price)} / unit</div>
+      </div>
+      <div class="service-qty">
+        <span class="qty-label">Qty</span>
+        <input class="qty-input" type="number" value="1" min="1" step="1" inputmode="numeric"
+          onclick="event.stopPropagation()"
+          oninput="updateSummary()" onchange="updateSummary()" />
+        <div class="qty-stepper">
+          <button class="step-btn" onclick="event.stopPropagation();step(${idx},-1)">−</button>
+          <button class="step-btn" onclick="event.stopPropagation();step(${idx},+1)">+</button>
+        </div>
+      </div>`;
+    el.addEventListener('click', () => { el.classList.toggle('selected'); updateSummary(); });
+    container.appendChild(el);
+  });
+}
+
+function step(idx, delta) {
+  const input = document.querySelectorAll('.service-item')[idx].querySelector('.qty-input');
+  input.value = Math.max(1, (parseInt(input.value) || 1) + delta);
+  updateSummary();
+}
+
+function setPayment(val, btn) {
+  currentPayment = val;
+  document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function toggleTravel() {
+  const show = document.getElementById('travel-toggle').checked;
+  document.getElementById('travel-wrap').style.display = show ? 'block' : 'none';
+  if (!show) document.getElementById('travel-km').value = '';
+  updateSummary();
+}
+
+function getTravel() {
+  if (!document.getElementById('travel-toggle').checked) return null;
+  const km = parseFloat(document.getElementById('travel-km').value);
+  if (!km || km <= 0) return null;
+  const total = Math.round(km * TRAVEL_RATE * 100) / 100;
+  return { name: `Travel ${km} km`, price: TRAVEL_RATE, qty: km, total, account: '4401' };
+}
+
+function getLineItems() {
+  const result = [];
+  document.querySelectorAll('.service-item.selected').forEach(el => {
+    const item = ITEMS[parseInt(el.dataset.idx)];
+    const qty = parseInt(el.querySelector('.qty-input').value) || 1;
+    result.push({ name: item.name, price: item.price, qty, total: item.price * qty, account: item.account || '4401' });
+  });
+  return result;
+}
+
+function updateSummary() {
+  const lineItems = getLineItems();
+  const travel = getTravel();
+  if (document.getElementById('travel-toggle').checked) {
+    const km = parseFloat(document.getElementById('travel-km').value);
+    document.getElementById('travel-amount').textContent =
+      km > 0 ? fmt(Math.round(km * TRAVEL_RATE * 100) / 100) : '—';
+  }
+  const all = travel ? [...lineItems, travel] : lineItems;
+  const btn = document.getElementById('save-btn');
+  if (all.length === 0) {
+    document.getElementById('summary').classList.remove('visible');
+    btn.disabled = true; return;
+  }
+  btn.disabled = false;
+  const total = all.reduce((s, i) => s + i.total, 0);
+  document.getElementById('sum-items').innerHTML = all.map(i => `
+    <div class="sum-pos">
+      <span class="pos-name">${i.name}</span>
+      <span>${fmt(i.total)}</span>
+    </div>`).join('');
+  document.getElementById('s-total').textContent = fmt(total);
+  document.getElementById('summary').classList.add('visible');
+}
+
+function resetForm() {
+  document.querySelectorAll('.service-item').forEach(el => {
+    el.classList.remove('selected');
+    el.querySelector('.qty-input').value = 1;
+  });
+  document.getElementById('customer').value = '';
+  document.getElementById('travel-toggle').checked = false;
+  document.getElementById('travel-wrap').style.display = 'none';
+  document.getElementById('travel-km').value = '';
+  document.getElementById('travel-amount').textContent = '—';
+  document.getElementById('summary').classList.remove('visible');
+  document.getElementById('save-btn').disabled = true;
+  document.getElementById('date-input').valueAsDate = new Date();
+}
+
+function validate() {
+  const dateVal = document.getElementById('date-input').value;
+  if (!dateVal) { toast('Date missing', true); return false; }
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  if (new Date(dateVal) > today) { toast('Date cannot be in the future', true); return false; }
+  if (!document.getElementById('customer').value.trim()) { toast('Customer name missing', true); return false; }
+  if (document.getElementById('travel-toggle').checked && !getTravel()) { toast('Enter kilometers', true); return false; }
+  if (getLineItems().length === 0 && !getTravel()) { toast('Select at least one service', true); return false; }
+  return true;
+}
+
+async function submitReceipt() {
+  if (!validate()) return;
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div>';
+
+  const lineItems = getLineItems();
+  const travel = getTravel();
+  const all = travel ? [...lineItems, travel] : lineItems;
+
+  const payload = {
+    date: document.getElementById('date-input').value,
+    customer: document.getElementById('customer').value.trim(),
+    items: all,
+    payment_method: currentPayment,
+  };
+
+  try {
+    const res = await fetch('/api/receipt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+
+    document.getElementById('success-nr').textContent = `Receipt ${data.receipt_nr}`;
+    document.getElementById('success-sub').textContent =
+      `${payload.customer} · ${data.quarter} · PDF & CSV saved`;
+    document.getElementById('success-pdf-btn').onclick = () => window.open(data.pdf_url, '_blank');
+    document.getElementById('success-overlay').classList.add('show');
+
+  } catch (e) {
+    toast('Error: ' + e.message, true);
+    btn.disabled = false;
+    btn.innerHTML = 'Save receipt';
+  }
+}
+
+function closeSuccess() {
+  document.getElementById('success-overlay').classList.remove('show');
+  document.getElementById('save-btn').disabled = true;
+  document.getElementById('save-btn').innerHTML = 'Save receipt';
+  resetForm();
+}
+
+function fmt(val) {
+  return val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+function toast(msg, isErr = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.toggle('error', isErr);
+  t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
