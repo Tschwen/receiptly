@@ -35,6 +35,12 @@
   "settings_meta": "Geschäftliche Angaben für PDF-Quittungen",
   "btn_save_settings": "Einstellungen speichern",
   "saved": "✓ Gespeichert",
+  "accounts_title": "Konten",
+  "accounts_meta": "Kontocodes für den Buchhaltungsexport",
+  "placeholder_account_code": "Code",
+  "placeholder_account_label": "Bezeichnung",
+  "btn_save_accounts": "Konten speichern",
+  "confirm_delete_account": "Konto \"{code}\" wirklich löschen?",
   "pricelist_title": "Preisliste",
   "pricelist_meta": "Preise und Leistungen verwalten",
   "travel_label": "Anfahrt",
@@ -64,11 +70,6 @@
   "cfg_email": "E-Mail",
   "cfg_tax_note": "Steuerhinweis",
   "cfg_language": "PDF-Sprache",
-
-  "acc_4401": "4401 – Hauptleistungen",
-  "acc_4410": "4410 – Raum / Vermietung",
-  "acc_4420": "4420 – Sonstige Leistungen",
-  "acc_4830": "4830 – Nebenerlöse",
 
   "receipt_count_one": "Quittung",
   "receipt_count_many": "Quittungen"

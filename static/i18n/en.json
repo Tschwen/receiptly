@@ -35,6 +35,12 @@
   "settings_meta": "Business details for PDF receipts",
   "btn_save_settings": "Save settings",
   "saved": "✓ Saved",
+  "accounts_title": "Accounts",
+  "accounts_meta": "Account codes used in the accounting export",
+  "placeholder_account_code": "Code",
+  "placeholder_account_label": "Label",
+  "btn_save_accounts": "Save accounts",
+  "confirm_delete_account": "Really delete account \"{code}\"?",
   "pricelist_title": "Price list",
   "pricelist_meta": "Manage services and prices",
   "travel_label": "Travel",
@@ -64,11 +70,6 @@
   "cfg_email": "Email",
   "cfg_tax_note": "Tax note",
   "cfg_language": "PDF language",
-
-  "acc_4401": "4401 – Main Services",
-  "acc_4410": "4410 – Venue / Rental",
-  "acc_4420": "4420 – Other Services",
-  "acc_4830": "4830 – Ancillary Revenue",
 
   "receipt_count_one": "receipt",
   "receipt_count_many": "receipts"

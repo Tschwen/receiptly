@@ -111,6 +111,24 @@
     <div class="saved-badge" id="settings-saved-badge" data-i18n="saved">✓ Saved</div>
   </div>
 
+  <!-- ACCOUNTS -->
+  <div class="items-section">
+    <div class="quarter-header" style="margin-bottom:14px">
+      <div>
+        <div class="quarter-title" data-i18n="accounts_title">Accounts</div>
+        <div class="quarter-meta" data-i18n="accounts_meta">Account codes used in the accounting export</div>
+      </div>
+    </div>
+    <div class="items-grid" id="accounts-grid"></div>
+    <div class="add-row" style="margin-top:10px">
+      <input class="add-input" type="text" id="new-account-code" data-i18n-placeholder="placeholder_account_code" placeholder="Code" style="max-width:100px" />
+      <input class="add-input" type="text" id="new-account-label" data-i18n-placeholder="placeholder_account_label" placeholder="Label" />
+      <button class="add-btn" onclick="addAccount()" data-i18n="btn_add">+ Add</button>
+    </div>
+    <button class="save-btn" onclick="saveAccounts()" data-i18n="btn_save_accounts">Save accounts</button>
+    <div class="saved-badge" id="accounts-saved-badge" data-i18n="saved">✓ Saved</div>
+  </div>
+
   <!-- PRICE LIST -->
   <div class="items-section">
     <div class="quarter-header" style="margin-bottom:14px">
@@ -149,9 +167,6 @@ const LANGUAGES = [
   { code: 'de', label: 'DE' },
 ];
 
-// Account codes — labels pulled from translations at render time
-const ACCOUNT_CODES = ['4401', '4410', '4420', '4830'];
-
 // Config fields — labels pulled from translations at render time
 const CONFIG_FIELDS = [
   { key: 'owner_name',    i18nKey: 'cfg_owner_name' },
@@ -165,6 +180,7 @@ const CONFIG_FIELDS = [
 
 let T = {};
 let itemsData = [];
+let accountsData = [];
 let configData = {};
 
 // ── Translation ───────────────────────────────────────────────────────────────
@@ -197,8 +213,8 @@ function buildLangSelect() {
 }
 
 function accountOptions(selected) {
-  return ACCOUNT_CODES.map(code =>
-    `<option value="${code}" ${code === selected ? 'selected' : ''}>${t('acc_' + code)}</option>`
+  return accountsData.map(a =>
+    `<option value="${a.code}" ${a.code === selected ? 'selected' : ''}>${a.code} – ${a.label}</option>`
   ).join('');
 }
 
@@ -207,6 +223,7 @@ async function setLanguage(lang) {
   await loadTranslations(lang);
   applyTranslations();
   renderSettings();
+  renderAccounts();
   renderItems();
   renderReceipts._last && renderReceipts(_last_receipts);
 }
@@ -218,14 +235,16 @@ async function init() {
   const lang = localStorage.getItem('lang') || 'en';
   buildLangSelect();
 
-  const [, cfg, items, receipts] = await Promise.all([
+  const [, cfg, accounts, items, receipts] = await Promise.all([
     loadTranslations(lang),
     fetch('/api/config').then(r => r.json()).catch(() => ({})),
+    fetch('/api/accounts').then(r => r.json()).catch(() => []),
     fetch('/api/items').then(r => r.json()).catch(() => []),
     fetch('/api/receipts').then(r => r.json()).catch(() => []),
   ]);
 
   configData = cfg;
+  accountsData = accounts;
   itemsData = items;
   _last_receipts = receipts;
 
@@ -233,10 +252,8 @@ async function init() {
   document.getElementById('hdr-sub').textContent =
     (cfg.owner_name || '') + ' · ' + (cfg.business_name || '');
 
-  // Populate new-account select (static part of the page)
-  document.getElementById('new-account').innerHTML = accountOptions('4401');
-
   renderSettings();
+  renderAccounts();
   renderItems();
   renderReceipts(receipts);
 }
@@ -276,6 +293,53 @@ async function saveSettings() {
   showBadge('settings-saved-badge');
 }
 
+// ── Accounts ──────────────────────────────────────────────────────────────────
+function renderAccounts() {
+  const grid = document.getElementById('accounts-grid');
+  grid.innerHTML = accountsData.map((a, idx) => `
+    <div class="item-row">
+      <span class="item-name" style="flex:0 0 80px;color:var(--clay);font-weight:bold">${a.code}</span>
+      <input class="price-input" style="width:100%;text-align:left;flex:1"
+             type="text" data-acc-idx="${idx}"
+             value="${a.label.replace(/"/g, '&quot;')}" />
+      <button class="del-btn" onclick="deleteAccount(${idx})" title="×">×</button>
+    </div>`).join('');
+
+  // keep new-account select in price list in sync
+  const sel = document.getElementById('new-account');
+  if (sel) sel.innerHTML = accountOptions(accountsData[0]?.code || '');
+}
+
+function addAccount() {
+  const code = document.getElementById('new-account-code').value.trim();
+  const label = document.getElementById('new-account-label').value.trim();
+  if (!code || !label) { alert(t('alert_name_price')); return; }
+  accountsData.push({ code, label });
+  document.getElementById('new-account-code').value = '';
+  document.getElementById('new-account-label').value = '';
+  renderAccounts();
+}
+
+function deleteAccount(idx) {
+  const code = accountsData[idx].code;
+  if (!confirm(t('confirm_delete_account').replace('{code}', code))) return;
+  accountsData.splice(idx, 1);
+  renderAccounts();
+}
+
+async function saveAccounts() {
+  document.querySelectorAll('[data-acc-idx]').forEach(el => {
+    accountsData[parseInt(el.dataset.accIdx)].label = el.value;
+  });
+  await fetch('/api/accounts', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(accountsData),
+  });
+  renderAccounts();
+  showBadge('accounts-saved-badge');
+}
+
 // ── Price list ────────────────────────────────────────────────────────────────
 function renderItems() {
   const grid = document.getElementById('items-grid');
@@ -295,6 +359,10 @@ function renderItems() {
       </button>
       <button class="del-btn" onclick="deleteItem(${idx})" title="×">×</button>
     </div>`).join('');
+
+  // keep new-account select in sync with current accounts
+  const newAccSel = document.getElementById('new-account');
+  if (newAccSel) newAccSel.innerHTML = accountOptions(accountsData[0]?.code || '');
 
   document.getElementById('travel-row').style.display = 'flex';
   fetch('/api/travel').then(r => r.json()).then(d => {

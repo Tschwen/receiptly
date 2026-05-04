@@ -16,10 +16,18 @@ app = FastAPI(title="Receiptly API")
 DATA_DIR   = Path(os.environ.get("DATA_DIR", "/data"))
 STATIC_DIR = Path(os.environ.get("STATIC_DIR", Path(__file__).parent.parent / "static"))
 
-COUNTER_FILE = DATA_DIR / "counter.json"
-ITEMS_FILE   = DATA_DIR / "items.json"
-TRAVEL_FILE  = DATA_DIR / "travel.json"
-CONFIG_FILE  = DATA_DIR / "config.json"
+COUNTER_FILE  = DATA_DIR / "counter.json"
+ITEMS_FILE    = DATA_DIR / "items.json"
+TRAVEL_FILE   = DATA_DIR / "travel.json"
+CONFIG_FILE   = DATA_DIR / "config.json"
+ACCOUNTS_FILE = DATA_DIR / "accounts.json"
+
+DEFAULT_ACCOUNTS = [
+    {"code": "4401", "label": "Main Services"},
+    {"code": "4410", "label": "Venue / Rental"},
+    {"code": "4420", "label": "Other Services"},
+    {"code": "4830", "label": "Ancillary Revenue"},
+]
 
 DEFAULT_CONFIG = {
     "owner_name":    "Jane Doe",
@@ -75,6 +83,16 @@ DEFAULT_ITEMS = [
     {"name": "Voucher",              "price": 80.00,  "active": True, "account": "4401"},
 ]
 DEFAULT_TRAVEL_RATE = 0.41
+
+# ── Accounts helpers ──────────────────────────────────────────────────────────
+def load_accounts():
+    if ACCOUNTS_FILE.exists():
+        return json.loads(ACCOUNTS_FILE.read_text())
+    return DEFAULT_ACCOUNTS
+
+def save_accounts(accounts):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    ACCOUNTS_FILE.write_text(json.dumps(accounts, ensure_ascii=False, indent=2))
 
 # ── Config helpers ────────────────────────────────────────────────────────────
 def load_config() -> dict:
@@ -478,6 +496,15 @@ def delete_item(idx: int):
         raise HTTPException(404, "Item not found")
     items.pop(idx)
     save_items(items)
+    return {"ok": True}
+
+@app.get("/api/accounts")
+def get_accounts():
+    return load_accounts()
+
+@app.put("/api/accounts")
+def update_accounts(body: list):
+    save_accounts(body)
     return {"ok": True}
 
 @app.get("/api/config")
