@@ -227,14 +227,18 @@ async function setLanguage(lang) {
 }
 
 // ── Initialisation ────────────────────────────────────────────────────────────
+function todayLocalStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 window.addEventListener('load', async () => {
   const lang = localStorage.getItem('lang') || 'en';
   buildLangSelect();
 
-  const today = new Date().toISOString().split('T')[0];
   const dateEl = document.getElementById('date-input');
-  dateEl.valueAsDate = new Date();
-  dateEl.max = today;
+  dateEl.value = todayLocalStr();
+  dateEl.max = todayLocalStr();
 
   const [, itemsJson, travelJson, cfg] = await Promise.all([
     loadTranslations(lang),
@@ -361,15 +365,14 @@ function resetForm() {
   document.getElementById('travel-amount').textContent = '—';
   document.getElementById('summary').classList.remove('visible');
   document.getElementById('save-btn').disabled = true;
-  document.getElementById('date-input').valueAsDate = new Date();
+  document.getElementById('date-input').value = todayLocalStr();
   updateSummary();
 }
 
 function validate() {
   const dateVal = document.getElementById('date-input').value;
   if (!dateVal) { toast(t('toast_date_missing'), true); return false; }
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  if (new Date(dateVal) > today) { toast(t('toast_future_date'), true); return false; }
+  if (dateVal > todayLocalStr()) { toast(t('toast_future_date'), true); return false; }
   if (!document.getElementById('customer').value.trim()) { toast(t('toast_customer_missing'), true); return false; }
   if (document.getElementById('travel-toggle').checked && !getTravel()) { toast(t('toast_enter_km'), true); return false; }
   if (getLineItems().length === 0 && !getTravel()) { toast(t('toast_select_service'), true); return false; }
