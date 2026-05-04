@@ -18,9 +18,15 @@
   body{font-family:'Georgia',serif;background:var(--linen);color:var(--bark);min-height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
 
   header{background:var(--bark);color:var(--linen);padding:52px 24px 20px;padding-top:calc(52px + env(safe-area-inset-top))}
-  header .eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--sand);margin-bottom:4px}
+  .header-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+  header .eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--sand)}
   header h1{font-size:26px;font-weight:normal;letter-spacing:.03em}
   header .sub{font-size:12px;color:var(--sand);margin-top:3px;font-style:italic}
+
+  /* To add a new language: add an entry to the LANGUAGES array in the script
+     and place a matching /i18n/<code>.json file in the static/i18n/ folder. */
+  .lang-select{background:transparent;color:var(--sand);border:1px solid rgba(212,196,160,.4);border-radius:6px;padding:3px 6px;font-family:'Georgia',serif;font-size:11px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none}
+  .lang-select:focus{border-color:var(--sand)}
 
   main{padding:20px 16px 110px;max-width:520px;margin:0 auto}
   .section-label{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--clay);margin:22px 0 8px}
@@ -92,31 +98,35 @@
 <body>
 
 <header>
-  <div class="eyebrow" id="hdr-business">…</div>
-  <h1>New Receipt</h1>
+  <div class="header-top">
+    <div class="eyebrow" id="hdr-business">…</div>
+    <select id="lang-select" class="lang-select" onchange="setLanguage(this.value)"></select>
+  </div>
+  <h1 data-i18n="new_receipt">New Receipt</h1>
   <p class="sub" id="hdr-owner">…</p>
 </header>
 
 <main>
-  <div class="section-label">Date</div>
+  <div class="section-label" data-i18n="label_date">Date</div>
   <input class="field" type="date" id="date-input" />
 
   <div class="divider"></div>
 
-  <div class="section-label">Services</div>
+  <div class="section-label" data-i18n="label_services">Services</div>
   <div class="service-list" id="service-list"></div>
 
   <div style="margin-top:12px">
     <label class="optional-toggle">
       <input type="checkbox" id="travel-toggle" onchange="toggleTravel()" />
-      <span>Add travel costs</span>
+      <span data-i18n="label_travel_toggle">Add travel costs</span>
     </label>
     <div id="travel-wrap" style="display:none;margin-top:12px">
-      <div class="section-label">Kilometers</div>
+      <div class="section-label" data-i18n="label_kilometers">Kilometers</div>
       <div style="display:flex;gap:10px;align-items:center">
-        <input class="field" type="number" id="travel-km" placeholder="e.g. 24"
+        <input class="field" type="number" id="travel-km"
                min="1" step="1" inputmode="numeric" style="flex:1"
-               oninput="updateSummary()" onchange="updateSummary()" />
+               oninput="updateSummary()" onchange="updateSummary()"
+               data-i18n-placeholder="placeholder_km" />
         <div style="background:var(--linen);border:1.5px solid var(--sand);border-radius:var(--radius);padding:14px 16px;white-space:nowrap;font-size:13px;color:var(--clay)">
           = <strong id="travel-amount" style="color:var(--bark)">—</strong>
         </div>
@@ -126,22 +136,22 @@
 
   <div class="divider"></div>
 
-  <div class="section-label">Payment method</div>
+  <div class="section-label" data-i18n="label_payment">Payment method</div>
   <div class="toggle-group">
-    <button class="toggle-btn active" onclick="setPayment('Cash',this)">💵 Cash</button>
-    <button class="toggle-btn" onclick="setPayment('Bank Transfer',this)">🏦 Bank Transfer</button>
+    <button class="toggle-btn active" data-payment="Cash" data-i18n="btn_cash" onclick="setPayment('Cash',this)">💵 Cash</button>
+    <button class="toggle-btn" data-payment="Bank Transfer" data-i18n="btn_bank_transfer" onclick="setPayment('Bank Transfer',this)">🏦 Bank Transfer</button>
   </div>
 
   <div class="divider"></div>
 
-  <div class="section-label">Customer name</div>
-  <input class="field" type="text" id="customer" placeholder="First Last" />
+  <div class="section-label" data-i18n="label_customer">Customer name</div>
+  <input class="field" type="text" id="customer" data-i18n-placeholder="placeholder_customer" placeholder="First Last" />
 
   <div class="summary-card" id="summary">
-    <div class="sum-header">Summary</div>
+    <div class="sum-header" data-i18n="summary_header">Summary</div>
     <div id="sum-items"></div>
     <div class="sum-total">
-      <span class="lbl">Total received</span>
+      <span class="lbl" data-i18n="summary_total">Total received</span>
       <span class="val" id="s-total">—</span>
     </div>
   </div>
@@ -150,19 +160,18 @@
 <div class="actions">
   <button class="btn btn-secondary" onclick="resetForm()">↺</button>
   <button class="btn btn-primary" id="save-btn" onclick="submitReceipt()" disabled>
-    Save receipt
+    <span data-i18n="btn_save_receipt">Save receipt</span>
   </button>
 </div>
 
-<!-- Success overlay -->
 <div class="success-overlay" id="success-overlay">
   <div class="success-card">
     <div class="success-icon">✓</div>
-    <div class="success-nr" id="success-nr">Receipt saved</div>
-    <div class="success-sub" id="success-sub">PDF and CSV saved on server.</div>
+    <div class="success-nr" id="success-nr"></div>
+    <div class="success-sub" id="success-sub"></div>
     <div class="success-btns">
-      <button class="success-btn success-btn-primary" id="success-pdf-btn">Open PDF</button>
-      <button class="success-btn success-btn-secondary" onclick="closeSuccess()">New receipt</button>
+      <button class="success-btn success-btn-primary" id="success-pdf-btn" data-i18n="btn_open_pdf">Open PDF</button>
+      <button class="success-btn success-btn-secondary" onclick="closeSuccess()" data-i18n="btn_new_receipt">New receipt</button>
     </div>
   </div>
 </div>
@@ -170,56 +179,100 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ── To add a language: add an entry here + create /static/i18n/<code>.json ──
+const LANGUAGES = [
+  { code: 'en', label: 'EN' },
+  { code: 'de', label: 'DE' },
+];
+
+let T = {};
 let ITEMS = [];
 let TRAVEL_RATE = 0.41;
 let currentPayment = 'Cash';
 
+// ── Translation ───────────────────────────────────────────────────────────────
+function t(key) { return T[key] || key; }
+
+async function loadTranslations(lang) {
+  try {
+    const res = await fetch(`/i18n/${lang}.json`);
+    T = await res.json();
+  } catch(_) {}
+  document.documentElement.lang = lang;
+}
+
+function applyTranslations() {
+  document.title = t('page_title');
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+}
+
+function buildLangSelect() {
+  const sel = document.getElementById('lang-select');
+  const current = localStorage.getItem('lang') || 'en';
+  sel.innerHTML = LANGUAGES.map(l =>
+    `<option value="${l.code}" ${l.code === current ? 'selected' : ''}>${l.label}</option>`
+  ).join('');
+}
+
+async function setLanguage(lang) {
+  localStorage.setItem('lang', lang);
+  await loadTranslations(lang);
+  applyTranslations();
+  buildList();
+}
+
+// ── Initialisation ────────────────────────────────────────────────────────────
 window.addEventListener('load', async () => {
+  const lang = localStorage.getItem('lang') || 'en';
+  buildLangSelect();
+
   const today = new Date().toISOString().split('T')[0];
   const dateEl = document.getElementById('date-input');
   dateEl.valueAsDate = new Date();
   dateEl.max = today;
-  await Promise.all([loadItems(), loadConfig()]);
+
+  const [, itemsJson, travelJson, cfg] = await Promise.all([
+    loadTranslations(lang),
+    fetch('/api/items').then(r => r.json()).catch(() => []),
+    fetch('/api/travel').then(r => r.json()).catch(() => ({ rate: 0.41 })),
+    fetch('/api/config').then(r => r.json()).catch(() => ({})),
+  ]);
+
+  ITEMS = itemsJson.filter(i => i.active);
+  TRAVEL_RATE = travelJson.rate ?? 0.41;
+
+  document.getElementById('hdr-business').textContent = cfg.business_name || '';
+  document.getElementById('hdr-owner').textContent =
+    (cfg.owner_name || '') + (cfg.city ? ' · ' + cfg.city : '');
+
+  applyTranslations();
+  buildList();
 });
 
-async function loadConfig() {
-  try {
-    const res = await fetch('/api/config');
-    const cfg = await res.json();
-    document.getElementById('hdr-business').textContent = cfg.business_name || '';
-    document.getElementById('hdr-owner').textContent =
-      (cfg.owner_name || '') + (cfg.city ? ' · ' + cfg.city : '');
-  } catch(_) {}
-}
-
-async function loadItems() {
-  try {
-    const [itemsRes, travelRes] = await Promise.all([
-      fetch('/api/items'),
-      fetch('/api/travel'),
-    ]);
-    ITEMS = (await itemsRes.json()).filter(i => i.active);
-    TRAVEL_RATE = (await travelRes.json()).rate;
-    buildList();
-  } catch(e) {
-    toast('Could not load price list', true);
-  }
-}
-
+// ── Service list ──────────────────────────────────────────────────────────────
 function buildList() {
   const container = document.getElementById('service-list');
+  const selected = new Set(
+    [...container.querySelectorAll('.service-item.selected')].map(el => parseInt(el.dataset.idx))
+  );
+  container.innerHTML = '';
   ITEMS.forEach((item, idx) => {
     const el = document.createElement('div');
-    el.className = 'service-item';
+    el.className = 'service-item' + (selected.has(idx) ? ' selected' : '');
     el.dataset.idx = idx;
     el.innerHTML = `
       <div class="service-checkbox">✓</div>
       <div class="service-info">
         <div class="service-name">${item.name}</div>
-        <div class="service-price">${fmt(item.price)} / unit</div>
+        <div class="service-price">${fmt(item.price)} ${t('per_unit')}</div>
       </div>
       <div class="service-qty">
-        <span class="qty-label">Qty</span>
+        <span class="qty-label">${t('qty_label')}</span>
         <input class="qty-input" type="number" value="1" min="1" step="1" inputmode="numeric"
           onclick="event.stopPropagation()"
           oninput="updateSummary()" onchange="updateSummary()" />
@@ -231,6 +284,7 @@ function buildList() {
     el.addEventListener('click', () => { el.classList.toggle('selected'); updateSummary(); });
     container.appendChild(el);
   });
+  if (selected.size) updateSummary();
 }
 
 function step(idx, delta) {
@@ -308,34 +362,32 @@ function resetForm() {
   document.getElementById('summary').classList.remove('visible');
   document.getElementById('save-btn').disabled = true;
   document.getElementById('date-input').valueAsDate = new Date();
+  updateSummary();
 }
 
 function validate() {
   const dateVal = document.getElementById('date-input').value;
-  if (!dateVal) { toast('Date missing', true); return false; }
+  if (!dateVal) { toast(t('toast_date_missing'), true); return false; }
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  if (new Date(dateVal) > today) { toast('Date cannot be in the future', true); return false; }
-  if (!document.getElementById('customer').value.trim()) { toast('Customer name missing', true); return false; }
-  if (document.getElementById('travel-toggle').checked && !getTravel()) { toast('Enter kilometers', true); return false; }
-  if (getLineItems().length === 0 && !getTravel()) { toast('Select at least one service', true); return false; }
+  if (new Date(dateVal) > today) { toast(t('toast_future_date'), true); return false; }
+  if (!document.getElementById('customer').value.trim()) { toast(t('toast_customer_missing'), true); return false; }
+  if (document.getElementById('travel-toggle').checked && !getTravel()) { toast(t('toast_enter_km'), true); return false; }
+  if (getLineItems().length === 0 && !getTravel()) { toast(t('toast_select_service'), true); return false; }
   return true;
 }
 
 async function submitReceipt() {
   if (!validate()) return;
-
   const btn = document.getElementById('save-btn');
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div>';
 
   const lineItems = getLineItems();
   const travel = getTravel();
-  const all = travel ? [...lineItems, travel] : lineItems;
-
   const payload = {
     date: document.getElementById('date-input').value,
     customer: document.getElementById('customer').value.trim(),
-    items: all,
+    items: travel ? [...lineItems, travel] : lineItems,
     payment_method: currentPayment,
   };
 
@@ -348,33 +400,35 @@ async function submitReceipt() {
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
 
-    document.getElementById('success-nr').textContent = `Receipt ${data.receipt_nr}`;
+    document.getElementById('success-nr').textContent = `${t('page_title')} ${data.receipt_nr}`;
     document.getElementById('success-sub').textContent =
-      `${payload.customer} · ${data.quarter} · PDF & CSV saved`;
+      `${payload.customer} · ${data.quarter} · ${t('success_sub_suffix')}`;
     document.getElementById('success-pdf-btn').onclick = () => window.open(data.pdf_url, '_blank');
     document.getElementById('success-overlay').classList.add('show');
-
   } catch (e) {
-    toast('Error: ' + e.message, true);
+    toast(t('error_prefix') + e.message, true);
     btn.disabled = false;
-    btn.innerHTML = 'Save receipt';
+    btn.innerHTML = `<span data-i18n="btn_save_receipt">${t('btn_save_receipt')}</span>`;
   }
 }
 
 function closeSuccess() {
   document.getElementById('success-overlay').classList.remove('show');
-  document.getElementById('save-btn').disabled = true;
-  document.getElementById('save-btn').innerHTML = 'Save receipt';
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.innerHTML = `<span data-i18n="btn_save_receipt">${t('btn_save_receipt')}</span>`;
   resetForm();
 }
 
 function fmt(val) {
-  return val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  const locale = (localStorage.getItem('lang') || 'en') === 'de' ? 'de-DE' : 'en-US';
+  return val.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 }
+
 function toast(msg, isErr = false) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.toggle('error', isErr);
-  t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2800);
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.toggle('error', isErr);
+  el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2800);
 }
 </script>
 </body>

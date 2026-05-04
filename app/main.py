@@ -28,6 +28,43 @@ DEFAULT_CONFIG = {
     "city":          "My City",
     "email":         "info@example.com",
     "tax_note":      "VAT not applicable (small business regulation).",
+    "language":      "en",
+}
+
+# To add a language: add an entry here matching a /static/i18n/<code>.json file.
+PDF_STRINGS: dict[str, dict] = {
+    "en": {
+        "title":           "RECEIPT",
+        "receipt_no":      "No.",
+        "receipt_for":     "RECEIPT FOR",
+        "confirmation":    "I hereby confirm receipt of the following amount.",
+        "col_service":     "SERVICE",
+        "col_qty":         "QTY",
+        "col_unit":        "UNIT",
+        "col_total":       "TOTAL",
+        "amount_received": "AMOUNT RECEIVED",
+        "payment_label":   "Payment:",
+        "proof":           "This receipt serves as proof of payment.",
+        "footer_label":    "Receipt",
+        "cash":            "Cash",
+        "bank_transfer":   "Bank Transfer",
+    },
+    "de": {
+        "title":           "QUITTUNG",
+        "receipt_no":      "Nr.",
+        "receipt_for":     "QUITTUNG FÜR",
+        "confirmation":    "Hiermit bestätige ich den Erhalt des nachfolgend aufgeführten Betrags.",
+        "col_service":     "LEISTUNG",
+        "col_qty":         "ANZ.",
+        "col_unit":        "EINZEL",
+        "col_total":       "GESAMT",
+        "amount_received": "BETRAG ERHALTEN",
+        "payment_label":   "Zahlungsart:",
+        "proof":           "Diese Quittung dient als Zahlungsbeleg.",
+        "footer_label":    "Quittung",
+        "cash":            "Barzahlung",
+        "bank_transfer":   "Überweisung",
+    },
 }
 
 DEFAULT_ITEMS = [
@@ -110,8 +147,10 @@ def quarter_dir(quarter: str) -> Path:
     p.mkdir(parents=True, exist_ok=True)
     return p
 
-def fmt_eur(val: float) -> str:
-    return f"{val:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
+def fmt_eur(val: float, language: str = "en") -> str:
+    if language == "de":
+        return f"{val:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"{val:,.2f} €"
 
 # ── PDF generation ────────────────────────────────────────────────────────────
 def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
@@ -125,6 +164,9 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
     city          = cfg.get("city",          DEFAULT_CONFIG["city"])
     email         = cfg.get("email",         DEFAULT_CONFIG["email"])
     tax_note      = cfg.get("tax_note",      DEFAULT_CONFIG["tax_note"])
+    language      = cfg.get("language",      "en")
+    s             = PDF_STRINGS.get(language, PDF_STRINGS["en"])
+    payment_display = {"Cash": s["cash"], "Bank Transfer": s["bank_transfer"]}.get(payment_method, payment_method)
 
     d = date.fromisoformat(date_str)
     date_fmt = d.strftime("%Y-%m-%d")
@@ -151,11 +193,11 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
     c.setFont("Helvetica", 9)
     c.drawString(ML, H - 30, f"{owner_name.upper()} · {business_name.upper()}")
     c.setFont("Helvetica", 22)
-    c.drawString(ML, H - 68, "RECEIPT")
+    c.drawString(ML, H - 68, s["title"])
 
     set_fill(SAND)
     c.setFont("Helvetica", 9)
-    c.drawRightString(MR, H - 30, f"No. {receipt_nr}")
+    c.drawRightString(MR, H - 30, f"{s['receipt_no']} {receipt_nr}")
     c.drawRightString(MR, H - 48, date_fmt)
 
     # Sender line
@@ -173,7 +215,7 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
     y -= 16
     set_fill(CLAY)
     c.setFont("Helvetica", 8)
-    c.drawString(ML, y, "RECEIPT FOR")
+    c.drawString(ML, y, s["receipt_for"])
     y -= 14
     set_fill(BARK)
     c.setFont("Helvetica-Bold", 12)
@@ -186,7 +228,7 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
     c.roundRect(ML, y - 8, TW, 24, 4, fill=1, stroke=0)
     set_fill(BARK)
     c.setFont("Helvetica", 10)
-    c.drawString(ML + 10, y + 2, "I hereby confirm receipt of the following amount.")
+    c.drawString(ML + 10, y + 2, s["confirmation"])
 
     # Table header
     y -= 30
@@ -194,10 +236,10 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
     c.rect(ML, y - 6, TW, 22, fill=1, stroke=0)
     set_fill(LINEN)
     c.setFont("Helvetica", 8)
-    c.drawString(ML + 6, y + 4, "SERVICE")
-    c.drawRightString(ML + 240, y + 4, "QTY")
-    c.drawRightString(ML + 320, y + 4, "UNIT")
-    c.drawRightString(MR - 4, y + 4, "TOTAL")
+    c.drawString(ML + 6, y + 4, s["col_service"])
+    c.drawRightString(ML + 240, y + 4, s["col_qty"])
+    c.drawRightString(ML + 320, y + 4, s["col_unit"])
+    c.drawRightString(MR - 4, y + 4, s["col_total"])
 
     # Line items
     y -= 6
@@ -215,9 +257,9 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
         c.drawString(ML + 6, y - 8, name)
         qty_str = str(int(item.qty)) if item.qty == int(item.qty) else f"{item.qty:.1f}"
         c.drawRightString(ML + 240, y - 8, qty_str)
-        c.drawRightString(ML + 320, y - 8, fmt_eur(item.price))
+        c.drawRightString(ML + 320, y - 8, fmt_eur(item.price, language))
         c.setFont("Helvetica-Bold", 10)
-        c.drawRightString(MR - 4, y - 8, fmt_eur(item.total))
+        c.drawRightString(MR - 4, y - 8, fmt_eur(item.total, language))
         set_stroke(SAND)
         c.setLineWidth(0.2)
         c.line(ML, y - row_h + 6, MR, y - row_h + 6)
@@ -229,10 +271,10 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
     c.roundRect(MR - 180, y - 12, 180, 36, 4, fill=1, stroke=0)
     set_fill(SAND)
     c.setFont("Helvetica", 8)
-    c.drawString(MR - 172, y + 10, "AMOUNT RECEIVED")
+    c.drawString(MR - 172, y + 10, s["amount_received"])
     set_fill(WHITE)
     c.setFont("Helvetica-Bold", 14)
-    c.drawRightString(MR - 8, y - 4, fmt_eur(total))
+    c.drawRightString(MR - 8, y - 4, fmt_eur(total, language))
 
     # Payment method
     y -= 44
@@ -240,10 +282,10 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
     c.roundRect(ML, y - 6, 130, 24, 3, fill=1, stroke=0)
     set_fill(CLAY)
     c.setFont("Helvetica", 8)
-    c.drawString(ML + 6, y + 6, "Payment:")
+    c.drawString(ML + 6, y + 6, s["payment_label"])
     set_fill(BARK)
     c.setFont("Helvetica-Bold", 9)
-    c.drawString(ML + 6, y - 4, payment_method)
+    c.drawString(ML + 6, y - 4, payment_display)
 
     # Tax note
     y -= 30
@@ -255,7 +297,7 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
     c.setFont("Helvetica", 8)
     c.drawString(ML, y, tax_note)
     y -= 10
-    c.drawString(ML, y, "This receipt serves as proof of payment.")
+    c.drawString(ML, y, s["proof"])
 
     # Signature
     y -= 40
@@ -274,7 +316,7 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
     c.setFont("Helvetica", 8)
     c.drawCentredString(W/2, 22, f"{owner_name}  ·  {address}")
     set_fill(LINEN)
-    c.drawCentredString(W/2, 10, f"Receipt {receipt_nr}")
+    c.drawCentredString(W/2, 10, f"{s['footer_label']} {receipt_nr}")
 
     c.save()
 
@@ -444,7 +486,7 @@ def get_config():
 
 @app.put("/api/config")
 def update_config(body: dict):
-    allowed = {"owner_name", "business_name", "address", "city", "email", "tax_note"}
+    allowed = {"owner_name", "business_name", "address", "city", "email", "tax_note", "language"}
     cfg = load_config()
     for k, v in body.items():
         if k in allowed:

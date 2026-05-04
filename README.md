@@ -11,6 +11,7 @@ A self-hosted PWA + FastAPI backend for issuing receipts. Business details are c
 - Banana Buchhaltung import export (quarterly `.txt` per quarter)
 - Admin UI to manage your price list and business settings
 - Quarterly ZIP download
+- i18n: UI and PDF language support (EN and DE included)
 
 ---
 
@@ -108,6 +109,21 @@ Point a domain at the container IP, terminate TLS with your preferred proxy (ngi
 ### 6. Configure your business details
 
 Open `http://<IP>/admin.html`, expand **Settings**, fill in your name, address, email, and save. These are stored in `/data/config.json` and used on every generated PDF.
+
+---
+
+## Adding a language
+
+UI translations live in `static/i18n/`. Each file is a flat JSON object mapping keys to strings.
+
+1. Copy `static/i18n/en.json` to `static/i18n/<code>.json` and translate the values
+2. Add an entry to the `LANGUAGES` array in both `static/index.html` and `static/admin.html`:
+   ```js
+   { code: 'fr', label: 'FR' }
+   ```
+3. Add a matching entry to `PDF_STRINGS` in `app/main.py` for translated PDF text
+
+The UI language is stored per browser in `localStorage`. The PDF language is set per instance in **Admin → Settings → PDF language**.
 
 ---
 
