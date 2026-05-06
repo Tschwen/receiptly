@@ -1,11 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import List
 from pathlib import Path
 from datetime import date
-import json, csv, zipfile, io, os, math
+import json, csv, zipfile, io, os, math, shutil
 
 # ── ReportLab for PDF ────────────────────────────────────────────────────────
 from reportlab.lib.pagesizes import A4
@@ -21,6 +21,14 @@ ITEMS_FILE    = DATA_DIR / "items.json"
 TRAVEL_FILE   = DATA_DIR / "travel.json"
 CONFIG_FILE   = DATA_DIR / "config.json"
 ACCOUNTS_FILE = DATA_DIR / "accounts.json"
+BRAND_FILE    = DATA_DIR / "brand.json"
+
+DEFAULT_BRAND = {
+    "header":    "#3a2e22",
+    "text":      "#3a2e22",
+    "highlight": "#d4c4a0",
+    "surface":   "#f5f0e8",
+}
 
 DEFAULT_ACCOUNTS = [
     {"code": "4401", "label": "Main Services"},
@@ -93,6 +101,27 @@ def load_accounts():
 def save_accounts(accounts):
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     ACCOUNTS_FILE.write_text(json.dumps(accounts, ensure_ascii=False, indent=2))
+
+# ── Brand helpers ─────────────────────────────────────────────────────────────
+def load_brand() -> dict:
+    if BRAND_FILE.exists():
+        return {**DEFAULT_BRAND, **json.loads(BRAND_FILE.read_text())}
+    return DEFAULT_BRAND.copy()
+
+def save_brand(brand: dict):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    BRAND_FILE.write_text(json.dumps(brand, ensure_ascii=False, indent=2))
+
+def hex_to_rgb(h: str) -> tuple:
+    h = h.lstrip('#')
+    return (int(h[0:2], 16) / 255, int(h[2:4], 16) / 255, int(h[4:6], 16) / 255)
+
+def find_logo() -> "Path | None":
+    for ext in ("png", "jpg", "jpeg"):
+        p = DATA_DIR / f"logo.{ext}"
+        if p.exists():
+            return p
+    return None
 
 # ── Config helpers ────────────────────────────────────────────────────────────
 def load_config() -> dict:
@@ -173,9 +202,11 @@ def fmt_eur(val: float, language: str = "en") -> str:
 # ── PDF generation ────────────────────────────────────────────────────────────
 def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
                  line_items: List[LineItem], total: float, payment_method: str,
-                 cfg: dict | None = None):
+                 cfg: dict | None = None, brand: dict | None = None):
     if cfg is None:
         cfg = load_config()
+    if brand is None:
+        brand = load_brand()
     owner_name    = cfg.get("owner_name",    DEFAULT_CONFIG["owner_name"])
     business_name = cfg.get("business_name", DEFAULT_CONFIG["business_name"])
     address       = cfg.get("address",       DEFAULT_CONFIG["address"])
@@ -189,11 +220,15 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
     d = date.fromisoformat(date_str)
     date_fmt = d.strftime("%Y-%m-%d")
 
-    BARK  = (58/255,  46/255,  34/255)
-    CLAY  = (122/255, 92/255,  66/255)
-    SAND  = (212/255, 196/255, 160/255)
-    LINEN = (245/255, 240/255, 232/255)
-    WHITE = (1, 1, 1)
+    HEADER    = hex_to_rgb(brand.get("header",    DEFAULT_BRAND["header"]))
+    TEXT      = hex_to_rgb(brand.get("text",      DEFAULT_BRAND["text"]))
+    HIGHLIGHT = hex_to_rgb(brand.get("highlight", DEFAULT_BRAND["highlight"]))
+    SURFACE   = hex_to_rgb(brand.get("surface",   DEFAULT_BRAND["surface"]))
+    WHITE     = (1, 1, 1)
+
+    def _lum(rgb): return 0.2126*rgb[0] + 0.7152*rgb[1] + 0.0722*rgb[2]
+    # Text colours that sit on top of the header bar — auto-contrast
+    ON_HEADER = SURFACE if _lum(HEADER) < 0.35 else TEXT
 
     W, H = A4
     ML = 56; MR = W - 56; TW = MR - ML
@@ -204,55 +239,72 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
     def set_stroke(rgb): c.setStrokeColorRGB(*rgb)
 
     # Header bar
-    set_fill(BARK)
+    set_fill(HEADER)
     c.rect(0, H - 110, W, 110, fill=1, stroke=0)
 
-    set_fill(LINEN)
+    # Logo (top-right of header, if present) — compute width first so text can avoid it
+    logo_path = find_logo()
+    logo_w = 0
+    if logo_path:
+        from reportlab.lib.utils import ImageReader
+        img_reader = ImageReader(str(logo_path))
+        iw, ih = img_reader.getSize()
+        max_h, max_w = 80, 140
+        scale = min(max_h / ih, max_w / iw)
+        dw, dh = iw * scale, ih * scale
+        logo_w = dw
+        logo_x = MR - dw
+        logo_y = H - 110 + (110 - dh) / 2
+        c.drawImage(str(logo_path), logo_x, logo_y, width=dw, height=dh, mask='auto')
+
+    text_right = MR - (logo_w + 10 if logo_w else 0)
+
+    set_fill(ON_HEADER)
     c.setFont("Helvetica", 9)
     c.drawString(ML, H - 30, f"{owner_name.upper()} · {business_name.upper()}")
     c.setFont("Helvetica", 22)
     c.drawString(ML, H - 68, s["title"])
 
-    set_fill(SAND)
+    set_fill(ON_HEADER)
     c.setFont("Helvetica", 9)
-    c.drawRightString(MR, H - 30, f"{s['receipt_no']} {receipt_nr}")
-    c.drawRightString(MR, H - 48, date_fmt)
+    c.drawRightString(text_right, H - 30, f"{s['receipt_no']} {receipt_nr}")
+    c.drawRightString(text_right, H - 48, date_fmt)
 
     # Sender line
     y = H - 130
-    set_fill(CLAY)
+    set_fill(TEXT)
     c.setFont("Helvetica", 9)
     c.drawString(ML, y, f"{owner_name}  ·  {address}  ·  {email}")
 
     y -= 14
-    set_stroke(SAND)
+    set_stroke(HIGHLIGHT)
     c.setLineWidth(0.4)
     c.line(ML, y, MR, y)
 
     # Recipient
     y -= 16
-    set_fill(CLAY)
+    set_fill(TEXT)
     c.setFont("Helvetica", 8)
     c.drawString(ML, y, s["receipt_for"])
     y -= 14
-    set_fill(BARK)
+    set_fill(TEXT)
     c.setFont("Helvetica-Bold", 12)
     c.drawString(ML, y, customer)
     c.setFont("Helvetica", 10)
 
     # Confirmation text
     y -= 20
-    set_fill(LINEN)
+    set_fill(SURFACE)
     c.roundRect(ML, y - 8, TW, 24, 4, fill=1, stroke=0)
-    set_fill(BARK)
+    set_fill(TEXT)
     c.setFont("Helvetica", 10)
     c.drawString(ML + 10, y + 2, s["confirmation"])
 
     # Table header
     y -= 30
-    set_fill(BARK)
+    set_fill(HEADER)
     c.rect(ML, y - 6, TW, 22, fill=1, stroke=0)
-    set_fill(LINEN)
+    set_fill(ON_HEADER)
     c.setFont("Helvetica", 8)
     c.drawString(ML + 6, y + 4, s["col_service"])
     c.drawRightString(ML + 240, y + 4, s["col_qty"])
@@ -263,9 +315,9 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
     y -= 6
     for i, item in enumerate(line_items):
         row_h = 24
-        set_fill(LINEN if i % 2 == 0 else WHITE)
+        set_fill(SURFACE if i % 2 == 0 else WHITE)
         c.rect(ML, y - row_h + 6, TW, row_h, fill=1, stroke=0)
-        set_fill(BARK)
+        set_fill(TEXT)
         c.setFont("Helvetica", 10)
         name = item.name
         while c.stringWidth(name, "Helvetica", 10) > 170 and len(name) > 5:
@@ -278,40 +330,40 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
         c.drawRightString(ML + 320, y - 8, fmt_eur(item.price, language))
         c.setFont("Helvetica-Bold", 10)
         c.drawRightString(MR - 4, y - 8, fmt_eur(item.total, language))
-        set_stroke(SAND)
+        set_stroke(HIGHLIGHT)
         c.setLineWidth(0.2)
         c.line(ML, y - row_h + 6, MR, y - row_h + 6)
         y -= row_h
 
     # Total box
     y -= 14
-    set_fill(BARK)
+    set_fill(HEADER)
     c.roundRect(MR - 180, y - 12, 180, 36, 4, fill=1, stroke=0)
-    set_fill(SAND)
+    set_fill(ON_HEADER)
     c.setFont("Helvetica", 8)
     c.drawString(MR - 172, y + 10, s["amount_received"])
-    set_fill(WHITE)
+    set_fill(ON_HEADER)
     c.setFont("Helvetica-Bold", 14)
     c.drawRightString(MR - 8, y - 4, fmt_eur(total, language))
 
     # Payment method
     y -= 44
-    set_fill(LINEN)
+    set_fill(SURFACE)
     c.roundRect(ML, y - 6, 130, 24, 3, fill=1, stroke=0)
-    set_fill(CLAY)
+    set_fill(TEXT)
     c.setFont("Helvetica", 8)
     c.drawString(ML + 6, y + 6, s["payment_label"])
-    set_fill(BARK)
+    set_fill(TEXT)
     c.setFont("Helvetica-Bold", 9)
     c.drawString(ML + 6, y - 4, payment_display)
 
     # Tax note
     y -= 30
-    set_stroke(SAND)
+    set_stroke(HIGHLIGHT)
     c.setLineWidth(0.3)
     c.line(ML, y, MR, y)
     y -= 12
-    set_fill(CLAY)
+    set_fill(TEXT)
     c.setFont("Helvetica", 8)
     c.drawString(ML, y, tax_note)
     y -= 10
@@ -319,21 +371,20 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
 
     # Signature
     y -= 40
-    set_stroke(BARK)
+    set_stroke(HEADER)
     c.setLineWidth(0.5)
     c.line(ML, y, ML + 160, y)
     y -= 10
-    set_fill(CLAY)
+    set_fill(TEXT)
     c.setFont("Helvetica", 8)
     c.drawString(ML, y, f"{owner_name}  ·  {city}, {date_fmt}")
 
     # Footer
-    set_fill(BARK)
+    set_fill(HEADER)
     c.rect(0, 0, W, 38, fill=1, stroke=0)
-    set_fill(SAND)
+    set_fill(ON_HEADER)
     c.setFont("Helvetica", 8)
     c.drawCentredString(W/2, 22, f"{owner_name}  ·  {address}")
-    set_fill(LINEN)
     c.drawCentredString(W/2, 10, f"{s['footer_label']} {receipt_nr}")
 
     c.save()
@@ -382,7 +433,7 @@ def create_receipt(req: ReceiptRequest):
     pdf_path = qdir / pdf_name
 
     generate_pdf(pdf_path, receipt_nr, req.date, req.customer,
-                 req.items, total, req.payment_method, load_config())
+                 req.items, total, req.payment_method, load_config(), load_brand())
     append_csv(qdir, receipt_nr, req.date, req.customer,
                req.items, total, req.payment_method, quarter)
 
@@ -520,6 +571,50 @@ def update_config(body: dict):
             cfg[k] = str(v)
     save_config(cfg)
     return cfg
+
+@app.get("/api/brand")
+def get_brand():
+    return load_brand()
+
+@app.put("/api/brand")
+def update_brand(body: dict):
+    allowed = {"header", "text", "highlight", "surface"}
+    brand = load_brand()
+    for k, v in body.items():
+        if k in allowed and isinstance(v, str) and v.startswith('#') and len(v) == 7:
+            brand[k] = v
+    save_brand(brand)
+    return brand
+
+@app.get("/api/logo")
+def get_logo():
+    logo = find_logo()
+    if not logo:
+        raise HTTPException(404, "No logo uploaded")
+    media_type = "image/png" if logo.suffix == ".png" else "image/jpeg"
+    return FileResponse(logo, media_type=media_type)
+
+@app.post("/api/logo")
+async def upload_logo(file: UploadFile = File(...)):
+    ext = (file.filename or "").rsplit(".", 1)[-1].lower()
+    if ext not in ("png", "jpg", "jpeg"):
+        raise HTTPException(400, "Only PNG/JPG files are allowed")
+    for old_ext in ("png", "jpg", "jpeg"):
+        old = DATA_DIR / f"logo.{old_ext}"
+        if old.exists():
+            old.unlink()
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    dest = DATA_DIR / f"logo.{ext}"
+    with open(dest, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+    return {"ok": True}
+
+@app.delete("/api/logo")
+def delete_logo():
+    logo = find_logo()
+    if logo:
+        logo.unlink()
+    return {"ok": True}
 
 # ── Static files (PWA + Admin) ────────────────────────────────────────────────
 app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")

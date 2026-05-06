@@ -5,81 +5,87 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin · Receipts</title>
 <style>
-  :root{--bark:#3a2e22;--clay:#7a5c42;--ochre:#b8842a;--sand:#d4c4a0;--linen:#f5f0e8;--white:#fff;--green:#4a7c59;--red:#c0392b;--radius:10px}
+  :root{--header:#3a2e22;--text:#3a2e22;--ochre:#b8842a;--highlight:#d4c4a0;--surface:#f5f0e8;--white:#fff;--green:#4a7c59;--red:#c0392b;--radius:10px;--on-header:#f5f0e8;--on-header-dim:#d4c4a0}
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Georgia',serif;background:var(--linen);color:var(--bark);min-height:100vh}
+  body{font-family:'Georgia',serif;background:var(--surface);color:var(--text);min-height:100vh}
 
-  header{background:var(--bark);color:var(--linen);padding:28px 32px;display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  header{background:var(--header);color:var(--on-header);padding:28px 32px;display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:12px}
   header h1{font-size:22px;font-weight:normal}
-  header .sub{font-size:12px;color:var(--sand)}
+  header .sub{font-size:12px;color:var(--on-header-dim)}
   .header-right{display:flex;align-items:center;gap:14px}
-  .back-link{font-size:13px;color:var(--sand);text-decoration:none;display:flex;align-items:center;gap:6px}
+  .back-link{font-size:13px;color:var(--on-header-dim);text-decoration:none;display:flex;align-items:center;gap:6px}
   .back-link:hover{color:var(--white)}
 
   /* To add a new language: add an entry to the LANGUAGES array in the script
      and place a matching /i18n/<code>.json file in the static/i18n/ folder. */
-  .lang-select{background:transparent;color:var(--sand);border:1px solid rgba(212,196,160,.4);border-radius:6px;padding:3px 6px;font-family:'Georgia',serif;font-size:11px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none}
-  .lang-select:focus{border-color:var(--sand)}
+  .lang-select{background:transparent;color:var(--on-header-dim);border:1px solid rgba(212,196,160,.4);border-radius:6px;padding:3px 6px;font-family:'Georgia',serif;font-size:11px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none}
+  .lang-select:focus{border-color:var(--on-header-dim)}
 
   main{max-width:900px;margin:0 auto;padding:28px 20px 60px}
 
   .quarter-group{margin-bottom:32px}
-  .quarter-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid var(--bark)}
-  .quarter-title{font-size:18px;color:var(--bark)}
-  .quarter-meta{font-size:12px;color:var(--clay)}
-  .zip-btn{background:var(--bark);color:var(--white);border:none;border-radius:8px;padding:8px 16px;font-family:'Georgia',serif;font-size:13px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
-  .zip-btn:hover{background:var(--clay)}
+  .quarter-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid var(--header)}
+  .quarter-title{font-size:18px;color:var(--text)}
+  .quarter-meta{font-size:12px;color:var(--text)}
+  .zip-btn{background:var(--header);color:var(--white);border:none;border-radius:8px;padding:8px 16px;font-family:'Georgia',serif;font-size:13px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+  .zip-btn:hover{background:var(--text)}
 
   table{width:100%;border-collapse:collapse}
-  thead tr{background:var(--bark)}
-  thead th{padding:10px 14px;text-align:left;font-weight:normal;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--linen)}
-  tbody tr{background:var(--white);border-bottom:1px solid var(--sand)}
+  thead tr{background:var(--header)}
+  thead th{padding:10px 14px;text-align:left;font-weight:normal;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--on-header)}
+  tbody tr{background:var(--white);border-bottom:1px solid var(--highlight)}
   tbody tr:nth-child(even){background:#faf7f2}
   tbody tr:hover{background:#fdf7ec}
-  tbody td{padding:12px 14px;font-size:13px;color:var(--bark)}
+  tbody td{padding:12px 14px;font-size:13px;color:var(--text)}
   td.nr{font-weight:bold;white-space:nowrap}
-  td.customer{color:var(--clay)}
+  td.customer{color:var(--text)}
 
   .pdf-link{color:var(--ochre);text-decoration:none;font-size:12px;display:inline-flex;align-items:center;gap:4px}
-  .pdf-link:hover{color:var(--bark)}
+  .pdf-link:hover{color:var(--text)}
 
-  .empty{text-align:center;padding:48px;color:var(--clay);font-style:italic}
+  .empty{text-align:center;padding:48px;color:var(--text);font-style:italic}
 
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:28px}
-  .stat-card{background:var(--white);border:1.5px solid var(--sand);border-radius:var(--radius);padding:16px 20px}
-  .stat-val{font-size:26px;color:var(--bark);margin-bottom:4px}
-  .stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--clay)}
+  .stat-card{background:var(--white);border:1.5px solid var(--highlight);border-radius:var(--radius);padding:16px 20px}
+  .stat-val{font-size:26px;color:var(--text);margin-bottom:4px}
+  .stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--text)}
 
-  .loading{text-align:center;padding:40px;color:var(--clay)}
-  .spinner{width:24px;height:24px;border:2px solid var(--sand);border-top-color:var(--bark);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+  .loading{text-align:center;padding:40px;color:var(--text)}
+  .spinner{width:24px;height:24px;border:2px solid var(--highlight);border-top-color:var(--text);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
   @keyframes spin{to{transform:rotate(360deg)}}
 
   .items-section{margin-bottom:40px}
   .items-grid{display:flex;flex-direction:column;gap:6px}
-  .item-row{display:flex;align-items:center;gap:10px;background:var(--white);border:1.5px solid var(--sand);border-radius:var(--radius);padding:10px 14px;transition:opacity .2s}
+  .item-row{display:flex;align-items:center;gap:10px;background:var(--white);border:1.5px solid var(--highlight);border-radius:var(--radius);padding:10px 14px;transition:opacity .2s}
   .item-row.inactive{opacity:.45}
-  .item-name{flex:1;font-size:14px;color:var(--bark)}
-  .price-input{width:90px;text-align:right;padding:6px 10px;border:1.5px solid var(--sand);border-radius:8px;font-family:'Georgia',serif;font-size:15px;color:var(--bark);background:var(--white);outline:none;-webkit-appearance:none}
+  .item-name{flex:1;font-size:14px;color:var(--text)}
+  .price-input{width:90px;text-align:right;padding:6px 10px;border:1.5px solid var(--highlight);border-radius:8px;font-family:'Georgia',serif;font-size:15px;color:var(--text);background:var(--white);outline:none;-webkit-appearance:none}
   .price-input:focus{border-color:var(--ochre);box-shadow:0 0 0 2px rgba(184,132,42,.15)}
-  .price-unit{font-size:12px;color:var(--clay);white-space:nowrap}
+  .price-unit{font-size:12px;color:var(--text);white-space:nowrap}
   .toggle-active{width:36px;height:22px;border-radius:11px;border:none;cursor:pointer;transition:background .2s;flex-shrink:0}
   .toggle-active.on{background:var(--green)}
-  .toggle-active.off{background:var(--sand)}
+  .toggle-active.off{background:var(--highlight)}
   .save-btn{background:var(--ochre);color:var(--white);border:none;border-radius:8px;padding:8px 18px;font-family:'Georgia',serif;font-size:13px;cursor:pointer;margin-top:12px}
-  .save-btn:hover{background:var(--bark)}
+  .save-btn:hover{background:var(--header)}
   .add-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-  .add-input{flex:1;min-width:140px;padding:9px 12px;border:1.5px solid var(--sand);border-radius:8px;font-family:'Georgia',serif;font-size:14px;color:var(--bark);background:var(--white);outline:none}
+  .add-input{flex:1;min-width:140px;padding:9px 12px;border:1.5px solid var(--highlight);border-radius:8px;font-family:'Georgia',serif;font-size:14px;color:var(--text);background:var(--white);outline:none}
   .add-input:focus{border-color:var(--ochre)}
-  .add-btn{background:var(--bark);color:var(--white);border:none;border-radius:8px;padding:9px 18px;font-family:'Georgia',serif;font-size:14px;cursor:pointer}
-  .del-btn{background:none;border:none;color:var(--sand);font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
+  .add-btn{background:var(--header);color:var(--white);border:none;border-radius:8px;padding:9px 18px;font-family:'Georgia',serif;font-size:14px;cursor:pointer}
+  .del-btn{background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
   .del-btn:hover{color:var(--red)}
-  .travel-rate-row{display:flex;align-items:center;gap:10px;background:var(--linen);border:1.5px solid var(--sand);border-radius:var(--radius);padding:10px 14px;margin-top:6px}
+  .travel-rate-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1.5px solid var(--highlight);border-radius:var(--radius);padding:10px 14px;margin-top:6px}
   .saved-badge{display:none;color:var(--green);font-size:12px;margin-top:6px}
   .saved-badge.show{display:block}
-  .account-select{padding:6px 8px;border:1.5px solid var(--sand);border-radius:8px;font-family:'Georgia',serif;font-size:13px;color:var(--clay);background:var(--white);outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;width:68px}
+  .account-select{padding:6px 8px;border:1.5px solid var(--highlight);border-radius:8px;font-family:'Georgia',serif;font-size:13px;color:var(--text);background:var(--white);outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;width:68px}
   .account-select:focus{border-color:var(--ochre)}
-  .lang-pdf-select{padding:6px 10px;border:1.5px solid var(--sand);border-radius:8px;font-family:'Georgia',serif;font-size:14px;color:var(--bark);background:var(--white);outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;flex:1}
+  .lang-pdf-select{padding:6px 10px;border:1.5px solid var(--highlight);border-radius:8px;font-family:'Georgia',serif;font-size:14px;color:var(--text);background:var(--white);outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;flex:1}
   .lang-pdf-select:focus{border-color:var(--ochre)}
+  input[type=color]{padding:2px;width:44px;height:34px;border:1.5px solid var(--highlight);border-radius:6px;cursor:pointer;background:none;outline:none}
+  input[type=color]:focus{border-color:var(--ochre)}
+  .color-hex{font-size:12px;color:var(--text);font-family:monospace;min-width:64px}
+  .logo-preview{max-height:80px;max-width:200px;object-fit:contain;border-radius:6px;border:1.5px solid var(--highlight)}
+  .upload-label{background:var(--header);color:var(--white);border:none;border-radius:8px;padding:9px 18px;font-family:'Georgia',serif;font-size:14px;cursor:pointer;display:inline-block}
+  .upload-label:hover{background:var(--text)}
 </style>
 </head>
 <body>
@@ -109,6 +115,41 @@
     </div>
     <button class="save-btn" onclick="saveSettings()" data-i18n="btn_save_settings">Save settings</button>
     <div class="saved-badge" id="settings-saved-badge" data-i18n="saved">✓ Saved</div>
+  </div>
+
+  <!-- BRAND COLORS -->
+  <div class="items-section">
+    <div class="quarter-header" style="margin-bottom:14px">
+      <div>
+        <div class="quarter-title" data-i18n="brand_title">Brand Colors</div>
+        <div class="quarter-meta" data-i18n="brand_meta">Used in PDF receipts · applied live to this page</div>
+      </div>
+    </div>
+    <div class="items-grid" id="brand-grid"></div>
+    <button class="save-btn" onclick="saveBrand()" data-i18n="btn_save_brand">Save colors</button>
+    <div class="saved-badge" id="brand-saved-badge" data-i18n="saved">✓ Saved</div>
+  </div>
+
+  <!-- LOGO -->
+  <div class="items-section">
+    <div class="quarter-header" style="margin-bottom:14px">
+      <div>
+        <div class="quarter-title" data-i18n="logo_title">Logo</div>
+        <div class="quarter-meta" data-i18n="logo_meta">Displayed top-right in PDF receipts (PNG/JPG)</div>
+      </div>
+    </div>
+    <div class="item-row" style="gap:14px;flex-wrap:wrap">
+      <img id="logo-preview" class="logo-preview" style="display:none" alt="Logo" />
+      <span id="logo-none" style="color:var(--text);font-size:13px;font-style:italic" data-i18n="logo_none">No logo uploaded</span>
+      <div style="display:flex;gap:10px;margin-left:auto;align-items:center">
+        <label class="upload-label">
+          <span data-i18n="btn_upload_logo">Upload</span>
+          <input type="file" id="logo-file-input" accept="image/png,image/jpeg" style="display:none" onchange="uploadLogo(this)" />
+        </label>
+        <button class="del-btn" id="logo-del-btn" onclick="deleteLogo()" style="font-size:22px;display:none" title="×">×</button>
+      </div>
+    </div>
+    <div class="saved-badge" id="logo-saved-badge" data-i18n="saved">✓ Saved</div>
   </div>
 
   <!-- ACCOUNTS -->
@@ -141,7 +182,7 @@
       <div class="loading"><div class="spinner"></div></div>
     </div>
     <div class="travel-rate-row" id="travel-row" style="display:none">
-      <span class="item-name" style="color:var(--clay)" data-i18n="travel_label">Travel</span>
+      <span class="item-name" style="color:var(--text)" data-i18n="travel_label">Travel</span>
       <input class="price-input" type="number" id="travel-rate-input" min="0" step="0.01" />
       <span class="price-unit" data-i18n="travel_unit">€ / km</span>
     </div>
@@ -182,6 +223,14 @@ let T = {};
 let itemsData = [];
 let accountsData = [];
 let configData = {};
+let brandData = {};
+
+const BRAND_KEYS = [
+  { key: 'header',    i18nKey: 'brand_header',    cssVar: '--header' },
+  { key: 'text',      i18nKey: 'brand_text',      cssVar: '--text' },
+  { key: 'highlight', i18nKey: 'brand_highlight',  cssVar: '--highlight' },
+  { key: 'surface',   i18nKey: 'brand_surface',   cssVar: '--surface' },
+];
 
 // ── Translation ───────────────────────────────────────────────────────────────
 function t(key) { return T[key] || key; }
@@ -222,6 +271,7 @@ async function setLanguage(lang) {
   localStorage.setItem('lang', lang);
   await loadTranslations(lang);
   applyTranslations();
+  renderBrand();
   renderSettings();
   renderAccounts();
   renderItems();
@@ -235,23 +285,28 @@ async function init() {
   const lang = localStorage.getItem('lang') || 'en';
   buildLangSelect();
 
-  const [, cfg, accounts, items, receipts] = await Promise.all([
+  const [, cfg, accounts, items, receipts, brand] = await Promise.all([
     loadTranslations(lang),
     fetch('/api/config').then(r => r.json()).catch(() => ({})),
     fetch('/api/accounts').then(r => r.json()).catch(() => []),
     fetch('/api/items').then(r => r.json()).catch(() => []),
     fetch('/api/receipts').then(r => r.json()).catch(() => []),
+    fetch('/api/brand').then(r => r.json()).catch(() => ({})),
   ]);
 
   configData = cfg;
   accountsData = accounts;
   itemsData = items;
   _last_receipts = receipts;
+  brandData = brand;
 
   applyTranslations();
   document.getElementById('hdr-sub').textContent =
     (cfg.owner_name || '') + ' · ' + (cfg.business_name || '');
 
+  applyBrandColors(brandData);
+  renderBrand();
+  loadLogo();
   renderSettings();
   renderAccounts();
   renderItems();
@@ -298,7 +353,7 @@ function renderAccounts() {
   const grid = document.getElementById('accounts-grid');
   grid.innerHTML = accountsData.map((a, idx) => `
     <div class="item-row">
-      <span class="item-name" style="flex:0 0 80px;color:var(--clay);font-weight:bold">${a.code}</span>
+      <span class="item-name" style="flex:0 0 80px;color:var(--text);font-weight:bold">${a.code}</span>
       <input class="price-input" style="width:100%;text-align:left;flex:1"
              type="text" data-acc-idx="${idx}"
              value="${a.label.replace(/"/g, '&quot;')}" />
@@ -476,6 +531,89 @@ function renderReceipts(receipts) {
   }).join('');
 }
 renderReceipts._last = true;
+
+// ── Brand colors ──────────────────────────────────────────────────────────────
+function hexLum(hex) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0,2),16)/255, g = parseInt(h.slice(2,4),16)/255, b = parseInt(h.slice(4,6),16)/255;
+  return 0.2126*r + 0.7152*g + 0.0722*b;
+}
+
+function applyBrandColors(brand) {
+  BRAND_KEYS.forEach(b => {
+    if (brand[b.key]) document.documentElement.style.setProperty(b.cssVar, brand[b.key]);
+  });
+  const hdr = brand.header || '#3a2e22';
+  const dark = hexLum(hdr) < 0.35;
+  document.documentElement.style.setProperty('--on-header',     dark ? (brand.surface   || '#f5f0e8') : (brand.text      || '#3b2d1f'));
+  document.documentElement.style.setProperty('--on-header-dim', dark ? (brand.highlight || '#d4c4a0') : (brand.text      || '#3b2d1f'));
+}
+
+function renderBrand() {
+  const grid = document.getElementById('brand-grid');
+  grid.innerHTML = BRAND_KEYS.map(b => `
+    <div class="item-row" style="gap:12px">
+      <span class="item-name" style="min-width:200px;flex:0 0 auto">${t(b.i18nKey)}</span>
+      <input type="color" data-brand="${b.key}" value="${brandData[b.key] || '#000000'}"
+             oninput="previewBrandColor('${b.cssVar}','${b.key}',this.value)" />
+      <span class="color-hex" id="brand-hex-${b.key}">${brandData[b.key] || ''}</span>
+    </div>`).join('');
+}
+
+function previewBrandColor(cssVar, key, value) {
+  document.documentElement.style.setProperty(cssVar, value);
+  const el = document.getElementById('brand-hex-' + key);
+  if (el) el.textContent = value;
+}
+
+async function saveBrand() {
+  const updated = {};
+  document.querySelectorAll('[data-brand]').forEach(el => {
+    updated[el.dataset.brand] = el.value;
+  });
+  const res = await fetch('/api/brand', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updated),
+  });
+  brandData = await res.json();
+  applyBrandColors(brandData);
+  showBadge('brand-saved-badge');
+}
+
+// ── Logo ──────────────────────────────────────────────────────────────────────
+function loadLogo() {
+  const preview = document.getElementById('logo-preview');
+  preview.onload = () => {
+    preview.style.display = '';
+    document.getElementById('logo-none').style.display = 'none';
+    document.getElementById('logo-del-btn').style.display = '';
+  };
+  preview.onerror = () => {
+    preview.style.display = 'none';
+    document.getElementById('logo-none').style.display = '';
+    document.getElementById('logo-del-btn').style.display = 'none';
+  };
+  preview.src = '/api/logo?t=' + Date.now();
+}
+
+async function uploadLogo(input) {
+  if (!input.files[0]) return;
+  const fd = new FormData();
+  fd.append('file', input.files[0]);
+  const res = await fetch('/api/logo', { method: 'POST', body: fd });
+  if (res.ok) { loadLogo(); showBadge('logo-saved-badge'); }
+  input.value = '';
+}
+
+async function deleteLogo() {
+  await fetch('/api/logo', { method: 'DELETE' });
+  const preview = document.getElementById('logo-preview');
+  preview.src = '';
+  preview.style.display = 'none';
+  document.getElementById('logo-none').style.display = '';
+  document.getElementById('logo-del-btn').style.display = 'none';
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function showBadge(id) {
