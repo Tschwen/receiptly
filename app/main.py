@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Body
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
@@ -554,7 +554,7 @@ def get_accounts():
     return load_accounts()
 
 @app.put("/api/accounts")
-def update_accounts(body: list):
+def update_accounts(body: list = Body(...)):
     save_accounts(body)
     return {"ok": True}
 
