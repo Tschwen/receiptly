@@ -10,82 +10,83 @@
 <title>Receipt</title>
 <style>
   :root {
-    --bark:#3a2e22; --clay:#7a5c42; --ochre:#b8842a;
-    --sand:#d4c4a0; --linen:#f5f0e8; --white:#fff;
+    --header:#3a2e22; --text:#3a2e22; --ochre:#b8842a;
+    --highlight:#d4c4a0; --surface:#f5f0e8; --white:#fff;
     --red:#c0392b; --green:#4a7c59; --radius:12px;
+    --on-header:#f5f0e8; --on-header-dim:#d4c4a0;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-  body{font-family:'Georgia',serif;background:var(--linen);color:var(--bark);min-height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
+  body{font-family:'Georgia',serif;background:var(--surface);color:var(--text);min-height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
 
-  header{background:var(--bark);color:var(--linen);padding:52px 24px 20px;padding-top:calc(52px + env(safe-area-inset-top))}
+  header{background:var(--header);color:var(--on-header);padding:52px 24px 20px;padding-top:calc(52px + env(safe-area-inset-top))}
   .header-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
-  header .eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--sand)}
+  header .eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--on-header-dim)}
   header h1{font-size:26px;font-weight:normal;letter-spacing:.03em}
-  header .sub{font-size:12px;color:var(--sand);margin-top:3px;font-style:italic}
+  header .sub{font-size:12px;color:var(--on-header-dim);margin-top:3px;font-style:italic}
 
   /* To add a new language: add an entry to the LANGUAGES array in the script
      and place a matching /i18n/<code>.json file in the static/i18n/ folder. */
-  .lang-select{background:transparent;color:var(--sand);border:1px solid rgba(212,196,160,.4);border-radius:6px;padding:3px 6px;font-family:'Georgia',serif;font-size:11px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none}
-  .lang-select:focus{border-color:var(--sand)}
+  .lang-select{background:transparent;color:var(--on-header-dim);border:1px solid rgba(212,196,160,.4);border-radius:6px;padding:3px 6px;font-family:'Georgia',serif;font-size:11px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none}
+  .lang-select:focus{border-color:var(--on-header-dim)}
 
   main{padding:20px 16px 110px;max-width:520px;margin:0 auto}
-  .section-label{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--clay);margin:22px 0 8px}
-  .field{background:var(--white);border:1.5px solid var(--sand);border-radius:var(--radius);padding:14px 16px;font-family:'Georgia',serif;font-size:16px;color:var(--bark);width:100%;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none}
+  .section-label{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--text);margin:22px 0 8px}
+  .field{background:var(--white);border:1.5px solid var(--highlight);border-radius:var(--radius);padding:14px 16px;font-family:'Georgia',serif;font-size:16px;color:var(--text);width:100%;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none}
   .field:focus{border-color:var(--ochre);box-shadow:0 0 0 3px rgba(184,132,42,.15)}
-  .divider{height:1px;background:var(--sand);margin:22px 0}
+  .divider{height:1px;background:var(--highlight);margin:22px 0}
 
   .service-list{display:flex;flex-direction:column;gap:8px}
-  .service-item{display:flex;align-items:center;gap:12px;background:var(--white);border:1.5px solid var(--sand);border-radius:var(--radius);padding:12px 14px;transition:border-color .15s,background .15s;cursor:pointer;user-select:none}
+  .service-item{display:flex;align-items:center;gap:12px;background:var(--white);border:1.5px solid var(--highlight);border-radius:var(--radius);padding:12px 14px;transition:border-color .15s,background .15s;cursor:pointer;user-select:none}
   .service-item.selected{border-color:var(--ochre);background:#fdf7ec}
-  .service-checkbox{width:24px;height:24px;flex-shrink:0;border:2px solid var(--sand);border-radius:6px;background:var(--white);display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:14px;color:transparent}
+  .service-checkbox{width:24px;height:24px;flex-shrink:0;border:2px solid var(--highlight);border-radius:6px;background:var(--white);display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:14px;color:transparent}
   .service-item.selected .service-checkbox{background:var(--ochre);border-color:var(--ochre);color:white}
   .service-info{flex:1;min-width:0}
-  .service-name{font-size:14px;color:var(--bark);line-height:1.3}
-  .service-price{font-size:12px;color:var(--clay);margin-top:2px}
+  .service-name{font-size:14px;color:var(--text);line-height:1.3}
+  .service-price{font-size:12px;color:var(--text);margin-top:2px}
   .service-qty{display:none;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
   .service-item.selected .service-qty{display:flex}
-  .qty-label{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--clay)}
-  .qty-input{width:54px;text-align:center;padding:7px 4px;border:1.5px solid var(--ochre);border-radius:8px;font-family:'Georgia',serif;font-size:18px;font-weight:bold;color:var(--bark);background:var(--white);outline:none;-webkit-appearance:none;appearance:none}
+  .qty-label{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text)}
+  .qty-input{width:54px;text-align:center;padding:7px 4px;border:1.5px solid var(--ochre);border-radius:8px;font-family:'Georgia',serif;font-size:18px;font-weight:bold;color:var(--text);background:var(--white);outline:none;-webkit-appearance:none;appearance:none}
   .qty-stepper{display:flex;gap:4px}
-  .step-btn{width:24px;height:24px;border:1px solid var(--sand);border-radius:6px;background:var(--linen);font-size:16px;cursor:pointer;color:var(--bark);display:flex;align-items:center;justify-content:center;line-height:1}
-  .step-btn:active{background:var(--sand)}
+  .step-btn{width:24px;height:24px;border:1px solid var(--highlight);border-radius:6px;background:var(--surface);font-size:16px;cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center;line-height:1}
+  .step-btn:active{background:var(--highlight)}
 
   .toggle-group{display:flex;gap:8px}
-  .toggle-btn{flex:1;padding:13px;border:1.5px solid var(--sand);border-radius:var(--radius);background:var(--white);color:var(--clay);font-family:'Georgia',serif;font-size:14px;cursor:pointer;transition:all .15s;text-align:center}
-  .toggle-btn.active{background:var(--bark);border-color:var(--bark);color:var(--white)}
+  .toggle-btn{flex:1;padding:13px;border:1.5px solid var(--highlight);border-radius:var(--radius);background:var(--white);color:var(--text);font-family:'Georgia',serif;font-size:14px;cursor:pointer;transition:all .15s;text-align:center}
+  .toggle-btn.active{background:var(--header);border-color:var(--text);color:var(--on-header)}
 
   .optional-toggle{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
   .optional-toggle input[type=checkbox]{width:20px;height:20px;accent-color:var(--ochre);cursor:pointer}
-  .optional-toggle span{font-size:13px;color:var(--clay)}
+  .optional-toggle span{font-size:13px;color:var(--text)}
 
-  .summary-card{background:var(--bark);color:var(--linen);border-radius:var(--radius);padding:18px 20px;margin-top:24px;display:none}
+  .summary-card{background:var(--header);color:var(--on-header);border-radius:var(--radius);padding:18px 20px;margin-top:24px;display:none}
   .summary-card.visible{display:block}
-  .sum-header{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sand);margin-bottom:10px}
-  .sum-pos{display:flex;justify-content:space-between;font-size:13px;color:rgba(245,240,232,.85);padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+  .sum-header{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--on-header-dim);margin-bottom:10px}
+  .sum-pos{display:flex;justify-content:space-between;font-size:13px;color:var(--on-header);padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08)}
   .sum-pos:last-of-type{border-bottom:none}
   .sum-pos .pos-name{flex:1;padding-right:8px}
   .sum-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.2)}
-  .sum-total .lbl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--sand)}
-  .sum-total .val{font-size:28px;color:var(--white)}
+  .sum-total .lbl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--on-header-dim)}
+  .sum-total .val{font-size:28px;color:var(--on-header)}
 
-  .actions{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));background:rgba(245,240,232,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--sand);display:flex;gap:10px}
+  .actions{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));background:rgba(245,240,232,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--highlight);display:flex;gap:10px}
   .btn{flex:1;padding:16px;border:none;border-radius:var(--radius);font-family:'Georgia',serif;font-size:15px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
-  .btn-primary{background:var(--bark);color:var(--white)}
-  .btn-primary:active{background:var(--clay);transform:scale(.98)}
-  .btn-primary:disabled{background:var(--sand);color:var(--clay);cursor:default;transform:none}
-  .btn-secondary{background:var(--white);color:var(--bark);border:1.5px solid var(--sand);flex:0 0 auto;padding:16px 20px}
-  .btn-secondary:active{background:var(--sand)}
+  .btn-primary{background:var(--header);color:var(--on-header)}
+  .btn-primary:active{background:var(--text);transform:scale(.98)}
+  .btn-primary:disabled{background:var(--highlight);color:var(--text);cursor:default;transform:none}
+  .btn-secondary{background:var(--white);color:var(--text);border:1.5px solid var(--highlight);flex:0 0 auto;padding:16px 20px}
+  .btn-secondary:active{background:var(--highlight)}
 
   .success-overlay{position:fixed;inset:0;background:rgba(58,46,34,.85);display:none;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(4px)}
   .success-overlay.show{display:flex}
   .success-card{background:var(--white);border-radius:20px;padding:36px 32px;text-align:center;max-width:320px;margin:16px}
   .success-icon{font-size:48px;margin-bottom:16px}
-  .success-nr{font-size:22px;color:var(--bark);margin-bottom:8px}
-  .success-sub{font-size:13px;color:var(--clay);margin-bottom:24px;line-height:1.5}
+  .success-nr{font-size:22px;color:var(--text);margin-bottom:8px}
+  .success-sub{font-size:13px;color:var(--text);margin-bottom:24px;line-height:1.5}
   .success-btns{display:flex;flex-direction:column;gap:10px}
   .success-btn{padding:14px;border-radius:var(--radius);font-family:'Georgia',serif;font-size:15px;cursor:pointer;border:none;transition:all .15s}
-  .success-btn-primary{background:var(--bark);color:var(--white)}
-  .success-btn-secondary{background:var(--linen);color:var(--bark);border:1.5px solid var(--sand)}
+  .success-btn-primary{background:var(--header);color:var(--on-header)}
+  .success-btn-secondary{background:var(--surface);color:var(--text);border:1.5px solid var(--highlight)}
 
   .toast{position:fixed;top:calc(20px + env(safe-area-inset-top));left:50%;transform:translateX(-50%) translateY(-80px);background:var(--green);color:white;padding:12px 24px;border-radius:100px;font-size:14px;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;z-index:100}
   .toast.show{transform:translateX(-50%) translateY(0)}
@@ -127,8 +128,8 @@
                min="1" step="1" inputmode="numeric" style="flex:1"
                oninput="updateSummary()" onchange="updateSummary()"
                data-i18n-placeholder="placeholder_km" />
-        <div style="background:var(--linen);border:1.5px solid var(--sand);border-radius:var(--radius);padding:14px 16px;white-space:nowrap;font-size:13px;color:var(--clay)">
-          = <strong id="travel-amount" style="color:var(--bark)">—</strong>
+        <div style="background:var(--surface);border:1.5px solid var(--highlight);border-radius:var(--radius);padding:14px 16px;white-space:nowrap;font-size:13px;color:var(--text)">
+          = <strong id="travel-amount" style="color:var(--text)">—</strong>
         </div>
       </div>
     </div>
@@ -190,6 +191,21 @@ let ITEMS = [];
 let TRAVEL_RATE = 0.41;
 let currentPayment = 'Cash';
 
+// ── Brand colors ─────────────────────────────────────────────────────────────
+function hexLum(hex) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0,2),16)/255, g = parseInt(h.slice(2,4),16)/255, b = parseInt(h.slice(4,6),16)/255;
+  return 0.2126*r + 0.7152*g + 0.0722*b;
+}
+function applyBrandColors(brand) {
+  const map = { header:'--header', text:'--text', highlight:'--highlight', surface:'--surface' };
+  Object.entries(map).forEach(([k,v]) => { if (brand[k]) document.documentElement.style.setProperty(v, brand[k]); });
+  const hdr = brand.header || '#3a2e22';
+  const dark = hexLum(hdr) < 0.35;
+  document.documentElement.style.setProperty('--on-header',     dark ? (brand.surface   || '#f5f0e8') : (brand.text      || '#3b2d1f'));
+  document.documentElement.style.setProperty('--on-header-dim', dark ? (brand.highlight || '#d4c4a0') : (brand.text      || '#3b2d1f'));
+}
+
 // ── Translation ───────────────────────────────────────────────────────────────
 function t(key) { return T[key] || key; }
 
@@ -240,12 +256,14 @@ window.addEventListener('load', async () => {
   dateEl.value = todayLocalStr();
   dateEl.max = todayLocalStr();
 
-  const [, itemsJson, travelJson, cfg] = await Promise.all([
+  const [, itemsJson, travelJson, cfg, brand] = await Promise.all([
     loadTranslations(lang),
     fetch('/api/items').then(r => r.json()).catch(() => []),
     fetch('/api/travel').then(r => r.json()).catch(() => ({ rate: 0.41 })),
     fetch('/api/config').then(r => r.json()).catch(() => ({})),
+    fetch('/api/brand').then(r => r.json()).catch(() => ({})),
   ]);
+  applyBrandColors(brand);
 
   ITEMS = itemsJson.filter(i => i.active);
   TRAVEL_RATE = travelJson.rate ?? 0.41;

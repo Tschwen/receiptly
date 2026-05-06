@@ -72,5 +72,18 @@
   "cfg_language": "PDF-Sprache",
 
   "receipt_count_one": "Quittung",
-  "receipt_count_many": "Quittungen"
+  "receipt_count_many": "Quittungen",
+
+  "brand_title": "Markenfarben",
+  "brand_meta": "Werden in PDF-Quittungen verwendet · live auf diese Seite angewendet",
+  "brand_header": "Kopfzeile, Buttons & Rahmen",
+  "brand_text": "Fließtext",
+  "brand_highlight": "Akzente & Trennlinien",
+  "brand_surface": "Hintergrund & Kästen",
+  "btn_save_brand": "Farben speichern",
+
+  "logo_title": "Logo",
+  "logo_meta": "Erscheint oben rechts in PDF-Quittungen (PNG/JPG)",
+  "logo_none": "Kein Logo hochgeladen",
+  "btn_upload_logo": "Hochladen"
 }

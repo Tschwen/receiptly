@@ -72,5 +72,18 @@
   "cfg_language": "PDF language",
 
   "receipt_count_one": "receipt",
-  "receipt_count_many": "receipts"
+  "receipt_count_many": "receipts",
+
+  "brand_title": "Brand Colors",
+  "brand_meta": "Used in PDF receipts · applied live to this page",
+  "brand_header": "Header, Buttons & Borders",
+  "brand_text": "Body Text",
+  "brand_highlight": "Highlights & Dividers",
+  "brand_surface": "Background & Boxes",
+  "btn_save_brand": "Save colors",
+
+  "logo_title": "Logo",
+  "logo_meta": "Displayed top-right in PDF receipts (PNG/JPG)",
+  "logo_none": "No logo uploaded",
+  "btn_upload_logo": "Upload"
 }
