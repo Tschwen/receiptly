@@ -185,6 +185,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="/auth.js"></script>
 <script>
 // ── To add a language: add an entry here + create /static/i18n/<code>.json ──
 const LANGUAGES = [
@@ -217,7 +218,7 @@ function t(key) { return T[key] || key; }
 
 async function loadTranslations(lang) {
   try {
-    const res = await fetch(`/i18n/${lang}.json`);
+    const res = await authFetch(`/i18n/${lang}.json`);
     T = await res.json();
   } catch(_) {}
   document.documentElement.lang = lang;
@@ -265,10 +266,10 @@ window.addEventListener('load', async () => {
 
   const [, itemsJson, travelJson, cfg, brand] = await Promise.all([
     loadTranslations(lang),
-    fetch('/api/items').then(r => r.json()).catch(() => []),
-    fetch('/api/travel').then(r => r.json()).catch(() => ({ rate: 0.41 })),
-    fetch('/api/config').then(r => r.json()).catch(() => ({})),
-    fetch('/api/brand').then(r => r.json()).catch(() => ({})),
+    authFetch('/api/items').then(r => r.json()).catch(() => []),
+    authFetch('/api/travel').then(r => r.json()).catch(() => ({ rate: 0.41 })),
+    authFetch('/api/config').then(r => r.json()).catch(() => ({})),
+    authFetch('/api/brand').then(r => r.json()).catch(() => ({})),
   ]);
   applyBrandColors(brand);
 
@@ -282,6 +283,7 @@ window.addEventListener('load', async () => {
   applyTranslations();
   updatePaymentTexts();
   buildList();
+  authBootDone();
 });
 
 // ── Service list ──────────────────────────────────────────────────────────────
@@ -432,7 +434,7 @@ async function submitReceipt() {
   };
 
   try {
-    const res = await fetch('/api/receipt', {
+    const res = await authFetch('/api/receipt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -445,7 +447,7 @@ async function submitReceipt() {
       `${t(inv ? 'invoice_label' : 'page_title')} ${data.receipt_nr}`;
     document.getElementById('success-sub').textContent =
       `${payload.customer} · ${data.quarter} · ${t(inv ? 'success_sub_suffix_invoice' : 'success_sub_suffix')}`;
-    document.getElementById('success-pdf-btn').onclick = () => window.open(data.pdf_url, '_blank');
+    document.getElementById('success-pdf-btn').onclick = () => authOpen(data.pdf_url);
     document.getElementById('success-overlay').classList.add('show');
   } catch (e) {
     toast(t('error_prefix') + e.message, true);
