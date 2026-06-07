@@ -201,6 +201,7 @@
   <div id="content"><div class="loading"><div class="spinner"></div></div></div>
 </main>
 
+<script src="/auth.js"></script>
 <script>
 // ── To add a language: add an entry here + create /static/i18n/<code>.json ──
 const LANGUAGES = [
@@ -242,7 +243,7 @@ function t(key) { return T[key] || key; }
 
 async function loadTranslations(lang) {
   try {
-    const res = await fetch(`/i18n/${lang}.json`);
+    const res = await authFetch(`/i18n/${lang}.json`);
     T = await res.json();
   } catch(_) {}
   document.documentElement.lang = lang;
@@ -292,11 +293,11 @@ async function init() {
 
   const [, cfg, accounts, items, receipts, brand] = await Promise.all([
     loadTranslations(lang),
-    fetch('/api/config').then(r => r.json()).catch(() => ({})),
-    fetch('/api/accounts').then(r => r.json()).catch(() => []),
-    fetch('/api/items').then(r => r.json()).catch(() => []),
-    fetch('/api/receipts').then(r => r.json()).catch(() => []),
-    fetch('/api/brand').then(r => r.json()).catch(() => ({})),
+    authFetch('/api/config').then(r => r.json()).catch(() => ({})),
+    authFetch('/api/accounts').then(r => r.json()).catch(() => []),
+    authFetch('/api/items').then(r => r.json()).catch(() => []),
+    authFetch('/api/receipts').then(r => r.json()).catch(() => []),
+    authFetch('/api/brand').then(r => r.json()).catch(() => ({})),
   ]);
 
   configData = cfg;
@@ -316,6 +317,7 @@ async function init() {
   renderAccounts();
   renderItems();
   renderReceipts(receipts);
+  authBootDone();
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
@@ -342,7 +344,7 @@ async function saveSettings() {
   document.querySelectorAll('[data-cfg]').forEach(el => {
     updated[el.dataset.cfg] = el.value;
   });
-  const res = await fetch('/api/config', {
+  const res = await authFetch('/api/config', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updated),
@@ -396,7 +398,7 @@ async function saveAccounts() {
   document.querySelectorAll('[data-acc-idx]').forEach(el => {
     accountsData[parseInt(el.dataset.accIdx)].label = el.value;
   });
-  await fetch('/api/accounts', {
+  await authFetch('/api/accounts', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(accountsData),
@@ -430,7 +432,7 @@ function renderItems() {
   if (newAccSel) newAccSel.innerHTML = accountOptions(accountsData[0]?.code || '');
 
   document.getElementById('travel-row').style.display = 'flex';
-  fetch('/api/travel').then(r => r.json()).then(d => {
+  authFetch('/api/travel').then(r => r.json()).then(d => {
     document.getElementById('travel-rate-input').value = d.rate.toFixed(2);
   }).catch(() => {
     document.getElementById('travel-rate-input').value = '0.41';
@@ -468,14 +470,14 @@ async function saveAll() {
     const idx = parseInt(sel.dataset.account);
     itemsData[idx].account = sel.value;
   });
-  await fetch('/api/items', {
+  await authFetch('/api/items', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(itemsData),
   });
   const travelRate = parseFloat(document.getElementById('travel-rate-input').value);
   if (!isNaN(travelRate)) {
-    await fetch('/api/travel', {
+    await authFetch('/api/travel', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rate: travelRate }),
@@ -505,7 +507,8 @@ function renderDocGroups(list, kind, withZip) {
             <div class="quarter-title">${quarter}</div>
             <div class="quarter-meta">${count} ${label}</div>
           </div>
-          ${withZip ? `<a href="/api/download/${year}/${q}" class="zip-btn" download>↓ ZIP</a>` : ''}
+          ${withZip ? `<a href="/api/download/${year}/${q}" class="zip-btn" download
+                          onclick="return authLink(event, this.href, 'Receipts_${year}_${q}.zip')">↓ ZIP</a>` : ''}
         </div>
         <table>
           <thead><tr>
@@ -518,7 +521,8 @@ function renderDocGroups(list, kind, withZip) {
               <tr>
                 <td class="nr">${r.nr}</td>
                 <td class="customer">${r.customer}</td>
-                <td><a href="${r.pdf_url}" target="_blank" class="pdf-link">${t('open_pdf')}</a></td>
+                <td><a href="${r.pdf_url}" target="_blank" class="pdf-link"
+                       onclick="return authLink(event, this.href)">${t('open_pdf')}</a></td>
               </tr>`).join('')}
           </tbody>
         </table>
@@ -630,20 +634,28 @@ function loadLogo() {
     document.getElementById('logo-none').style.display = '';
     document.getElementById('logo-del-btn').style.display = 'none';
   };
-  preview.src = '/api/logo?t=' + Date.now();
+  if (getAuth()) {
+    // <img src> can't carry the Authorization header — load as blob instead
+    authFetch('/api/logo?t=' + Date.now())
+      .then(r => { if (!r.ok) throw 0; return r.blob(); })
+      .then(b => { preview.src = URL.createObjectURL(b); })
+      .catch(() => preview.onerror());
+  } else {
+    preview.src = '/api/logo?t=' + Date.now();
+  }
 }
 
 async function uploadLogo(input) {
   if (!input.files[0]) return;
   const fd = new FormData();
   fd.append('file', input.files[0]);
-  const res = await fetch('/api/logo', { method: 'POST', body: fd });
+  const res = await authFetch('/api/logo', { method: 'POST', body: fd });
   if (res.ok) { loadLogo(); showBadge('logo-saved-badge'); }
   input.value = '';
 }
 
 async function deleteLogo() {
-  await fetch('/api/logo', { method: 'DELETE' });
+  await authFetch('/api/logo', { method: 'DELETE' });
   const preview = document.getElementById('logo-preview');
   preview.src = '';
   preview.style.display = 'none';
