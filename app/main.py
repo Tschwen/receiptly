@@ -17,6 +17,7 @@ DATA_DIR   = Path(os.environ.get("DATA_DIR", "/data"))
 STATIC_DIR = Path(os.environ.get("STATIC_DIR", Path(__file__).parent.parent / "static"))
 
 COUNTER_FILE  = DATA_DIR / "counter.json"
+INVOICE_COUNTER_FILE = DATA_DIR / "invoice_counter.json"
 ITEMS_FILE    = DATA_DIR / "items.json"
 TRAVEL_FILE   = DATA_DIR / "travel.json"
 CONFIG_FILE   = DATA_DIR / "config.json"
@@ -45,6 +46,11 @@ DEFAULT_CONFIG = {
     "email":         "info@example.com",
     "tax_note":      "VAT not applicable (small business regulation).",
     "language":      "en",
+    # Invoice / bank transfer settings (used for the EPC QR code on invoices)
+    "payee_name":    "",   # Zahlungsempfänger — falls back to owner_name if empty
+    "iban":          "",
+    "bic":           "",   # optional for SEPA
+    "invoice_terms": "",   # falls back to the language default if empty
 }
 
 # To add a language: add an entry here matching a /static/i18n/<code>.json file.
@@ -64,6 +70,19 @@ PDF_STRINGS: dict[str, dict] = {
         "footer_label":    "Receipt",
         "cash":            "Cash",
         "bank_transfer":   "Bank Transfer",
+        "invoice_title":   "INVOICE",
+        "invoice_no":      "No.",
+        "invoice_for":     "INVOICE FOR",
+        "invoice_intro":   "I hereby invoice you for the following services.",
+        "invoice_total":   "INVOICE TOTAL",
+        "payment_info":    "PAYMENT DETAILS",
+        "payee":           "Payee",
+        "iban":            "IBAN",
+        "bic":             "BIC",
+        "reference":       "Reference",
+        "scan_hint":       "Scan with your banking app",
+        "invoice_footer":  "Invoice",
+        "default_terms":   "Please transfer the amount within 30 days without deductions.",
     },
     "de": {
         "title":           "QUITTUNG",
@@ -80,6 +99,19 @@ PDF_STRINGS: dict[str, dict] = {
         "footer_label":    "Quittung",
         "cash":            "Barzahlung",
         "bank_transfer":   "Überweisung",
+        "invoice_title":   "RECHNUNG",
+        "invoice_no":      "Nr.",
+        "invoice_for":     "RECHNUNG FÜR",
+        "invoice_intro":   "Hiermit stelle ich Ihnen die folgenden Leistungen in Rechnung.",
+        "invoice_total":   "RECHNUNGSBETRAG",
+        "payment_info":    "ZAHLUNGSINFORMATIONEN",
+        "payee":           "Empfänger",
+        "iban":            "IBAN",
+        "bic":             "BIC",
+        "reference":       "Verwendungszweck",
+        "scan_hint":       "Mit der Banking-App scannen",
+        "invoice_footer":  "Rechnung",
+        "default_terms":   "Bitte innerhalb von 30 Tagen ohne Abzüge überweisen.",
     },
 }
 
@@ -173,6 +205,7 @@ class ReceiptResponse(BaseModel):
     receipt_nr: str
     pdf_url: str
     quarter: str
+    doc_type: str = "receipt"   # receipt | invoice
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def get_quarter(date_str: str) -> str:
@@ -189,6 +222,16 @@ def get_next_number(date_str: str) -> str:
     COUNTER_FILE.write_text(json.dumps(data))
     return f"{d.year}-{data[year]:03d}"
 
+def get_next_invoice_number(date_str: str) -> str:
+    # Separate counter — invoices do not consume receipt numbers.
+    d = date.fromisoformat(date_str)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    data = json.loads(INVOICE_COUNTER_FILE.read_text()) if INVOICE_COUNTER_FILE.exists() else {}
+    year = str(d.year)
+    data[year] = data.get(year, 0) + 1
+    INVOICE_COUNTER_FILE.write_text(json.dumps(data))
+    return f"R{d.year}-{data[year]:03d}"
+
 def quarter_dir(quarter: str) -> Path:
     p = DATA_DIR / quarter
     p.mkdir(parents=True, exist_ok=True)
@@ -199,10 +242,44 @@ def fmt_eur(val: float, language: str = "en") -> str:
         return f"{val:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
     return f"{val:,.2f} €"
 
+# ── EPC QR code (Girocode) for SEPA credit transfer ──────────────────────────
+def epc_qr_payload(payee: str, iban: str, bic: str, amount: float, reference: str) -> str:
+    """EPC069-12 payload (Girocode) — scannable by banking apps for a SEPA transfer.
+
+    Version 001 (BIC mandatory) is used whenever a BIC is configured: some
+    banking apps (notably older Sparkasse versions) only accept 001.
+    Without a BIC we fall back to version 002, where BIC is optional.
+    """
+    bic = bic.replace(" ", "")
+    return "\n".join([
+        "BCD",
+        "001" if bic else "002",
+        "1",                       # UTF-8
+        "SCT",
+        bic,
+        payee.replace("\n", " ")[:70],
+        iban.replace(" ", "").upper(),
+        f"EUR{amount:.2f}",
+        "",                        # purpose code
+        "",                        # structured remittance
+        reference.replace("\n", " ")[:140],  # unstructured remittance (Verwendungszweck)
+    ])
+
+def draw_epc_qr(c, payload: str, x: float, y: float, size: float):
+    from reportlab.graphics.barcode.qr import QrCodeWidget
+    from reportlab.graphics.shapes import Drawing
+    from reportlab.graphics import renderPDF
+    widget = QrCodeWidget(payload, barLevel="M")
+    _, _, w, h = widget.getBounds()
+    d = Drawing(size, size, transform=[size / w, 0, 0, size / h, 0, 0])
+    d.add(widget)
+    renderPDF.draw(d, c, x, y)
+
 # ── PDF generation ────────────────────────────────────────────────────────────
 def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
                  line_items: List[LineItem], total: float, payment_method: str,
-                 cfg: dict | None = None, brand: dict | None = None):
+                 cfg: dict | None = None, brand: dict | None = None,
+                 doc_type: str = "receipt"):
     if cfg is None:
         cfg = load_config()
     if brand is None:
@@ -215,6 +292,15 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
     tax_note      = cfg.get("tax_note",      DEFAULT_CONFIG["tax_note"])
     language      = cfg.get("language",      "en")
     s             = PDF_STRINGS.get(language, PDF_STRINGS["en"])
+    is_invoice    = doc_type == "invoice"
+    if is_invoice:
+        s = {**s,
+             "title":           s["invoice_title"],
+             "receipt_no":      s["invoice_no"],
+             "receipt_for":     s["invoice_for"],
+             "confirmation":    s["invoice_intro"],
+             "amount_received": s["invoice_total"],
+             "footer_label":    s["invoice_footer"]}
     payment_display = {"Cash": s["cash"], "Bank Transfer": s["bank_transfer"]}.get(payment_method, payment_method)
 
     d = date.fromisoformat(date_str)
@@ -346,38 +432,99 @@ def generate_pdf(path: Path, receipt_nr: str, date_str: str, customer: str,
     c.setFont("Helvetica-Bold", 14)
     c.drawRightString(MR - 8, y - 4, fmt_eur(total, language))
 
-    # Payment method
-    y -= 44
-    set_fill(SURFACE)
-    c.roundRect(ML, y - 6, 130, 24, 3, fill=1, stroke=0)
-    set_fill(TEXT)
-    c.setFont("Helvetica", 8)
-    c.drawString(ML + 6, y + 6, s["payment_label"])
-    set_fill(TEXT)
-    c.setFont("Helvetica-Bold", 9)
-    c.drawString(ML + 6, y - 4, payment_display)
+    if is_invoice:
+        # Payment details box with EPC QR (Girocode)
+        y -= 18
+        payee = cfg.get("payee_name") or owner_name
+        iban  = (cfg.get("iban") or "").strip()
+        bic   = (cfg.get("bic") or "").strip()
+        terms = cfg.get("invoice_terms") or s["default_terms"]
+        reference = f"{s['invoice_footer']} {receipt_nr}"
 
-    # Tax note
-    y -= 30
-    set_stroke(HIGHLIGHT)
-    c.setLineWidth(0.3)
-    c.line(ML, y, MR, y)
-    y -= 12
-    set_fill(TEXT)
-    c.setFont("Helvetica", 8)
-    c.drawString(ML, y, tax_note)
-    y -= 10
-    c.drawString(ML, y, s["proof"])
+        box_h = 128
+        box_top = y
+        box_bottom = box_top - box_h
+        set_fill(SURFACE)
+        c.roundRect(ML, box_bottom, TW, box_h, 6, fill=1, stroke=0)
+        set_fill(TEXT)
+        c.setFont("Helvetica-Bold", 8)
+        c.drawString(ML + 12, box_top - 16, s["payment_info"])
 
-    # Signature
-    y -= 40
-    set_stroke(HEADER)
-    c.setLineWidth(0.5)
-    c.line(ML, y, ML + 160, y)
-    y -= 10
-    set_fill(TEXT)
-    c.setFont("Helvetica", 8)
-    c.drawString(ML, y, f"{owner_name}  ·  {city}, {date_fmt}")
+        if iban:
+            qr_size = 96
+            qr_x = MR - qr_size - 14
+            qr_y = box_bottom + 24
+            # White backing so the QR quiet zone stays high-contrast —
+            # banking-app scanners reject codes on tinted backgrounds.
+            set_fill(WHITE)
+            c.roundRect(qr_x - 4, qr_y - 4, qr_size + 8, qr_size + 8, 3, fill=1, stroke=0)
+            payload = epc_qr_payload(payee, iban, bic, total, reference)
+            draw_epc_qr(c, payload, qr_x, qr_y, qr_size)
+            set_fill(TEXT)
+            c.setFont("Helvetica", 6.5)
+            c.drawCentredString(qr_x + qr_size / 2, qr_y - 12, s["scan_hint"])
+
+        ty = box_top - 34
+        rows = [(s["payee"], payee), (s["iban"], iban or "—")]
+        if bic:
+            rows.append((s["bic"], bic))
+        rows.append((s["reference"], reference))
+        for label, value in rows:
+            set_fill(TEXT)
+            c.setFont("Helvetica", 8)
+            c.drawString(ML + 12, ty, label)
+            c.setFont("Helvetica-Bold", 9)
+            c.drawString(ML + 110, ty, str(value))
+            ty -= 14
+
+        # Payment terms (e.g. "Bitte innerhalb von 30 Tagen ohne Abzüge überweisen.")
+        set_fill(TEXT)
+        c.setFont("Helvetica-Oblique", 9)
+        c.drawString(ML + 12, box_bottom + 12, terms)
+        y = box_bottom
+
+        # Tax note
+        y -= 18
+        set_stroke(HIGHLIGHT)
+        c.setLineWidth(0.3)
+        c.line(ML, y, MR, y)
+        y -= 12
+        set_fill(TEXT)
+        c.setFont("Helvetica", 8)
+        c.drawString(ML, y, tax_note)
+    else:
+        # Payment method
+        y -= 44
+        set_fill(SURFACE)
+        c.roundRect(ML, y - 6, 130, 24, 3, fill=1, stroke=0)
+        set_fill(TEXT)
+        c.setFont("Helvetica", 8)
+        c.drawString(ML + 6, y + 6, s["payment_label"])
+        set_fill(TEXT)
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(ML + 6, y - 4, payment_display)
+
+        # Tax note
+        y -= 30
+        set_stroke(HIGHLIGHT)
+        c.setLineWidth(0.3)
+        c.line(ML, y, MR, y)
+        y -= 12
+        set_fill(TEXT)
+        c.setFont("Helvetica", 8)
+        c.drawString(ML, y, tax_note)
+        y -= 10
+        c.drawString(ML, y, s["proof"])
+
+        # Signature
+        y -= 40
+        set_stroke(HEADER)
+        c.setLineWidth(0.5)
+        c.line(ML, y, ML + 160, y)
+        y -= 10
+        set_fill(TEXT)
+        c.setFont("Helvetica", 8)
+        c.drawString(ML, y, f"{owner_name}  ·  {city}, {date_fmt}")
 
     # Footer
     set_fill(HEADER)
@@ -424,23 +571,33 @@ def append_csv(qdir: Path, receipt_nr: str, date_str: str, customer: str,
 @app.post("/api/receipt", response_model=ReceiptResponse)
 def create_receipt(req: ReceiptRequest):
     quarter = get_quarter(req.date)
-    receipt_nr = get_next_number(req.date)
     qdir = quarter_dir(quarter)
     total = sum(i.total for i in req.items)
+    # Bank Transfer creates an invoice: own number sequence, EPC QR payment
+    # box on the PDF, and no row in the Banana accounting export.
+    is_invoice = req.payment_method == "Bank Transfer"
 
     customer_slug = req.customer.replace(" ", "-").replace("/", "-")
-    pdf_name = f"Receipt_{receipt_nr}_{customer_slug}.pdf"
+    if is_invoice:
+        doc_nr = get_next_invoice_number(req.date)
+        pdf_name = f"Invoice_{doc_nr}_{customer_slug}.pdf"
+    else:
+        doc_nr = get_next_number(req.date)
+        pdf_name = f"Receipt_{doc_nr}_{customer_slug}.pdf"
     pdf_path = qdir / pdf_name
 
-    generate_pdf(pdf_path, receipt_nr, req.date, req.customer,
-                 req.items, total, req.payment_method, load_config(), load_brand())
-    append_csv(qdir, receipt_nr, req.date, req.customer,
-               req.items, total, req.payment_method, quarter)
+    generate_pdf(pdf_path, doc_nr, req.date, req.customer,
+                 req.items, total, req.payment_method, load_config(), load_brand(),
+                 doc_type="invoice" if is_invoice else "receipt")
+    if not is_invoice:
+        append_csv(qdir, doc_nr, req.date, req.customer,
+                   req.items, total, req.payment_method, quarter)
 
     return ReceiptResponse(
-        receipt_nr=receipt_nr,
+        receipt_nr=doc_nr,
         pdf_url=f"/api/receipt/{quarter}/{pdf_name}",
         quarter=quarter,
+        doc_type="invoice" if is_invoice else "receipt",
     )
 
 @app.get("/api/receipt/{year}/{q}/{filename}")
@@ -463,15 +620,17 @@ def list_receipts():
             if not q_dir.is_dir():
                 continue
             quarter = f"{year_dir.name}/{q_dir.name}"
-            for pdf in sorted(q_dir.glob("Receipt_*.pdf")):
-                parts = pdf.stem.split("_", 2)
-                result.append({
-                    "quarter":  quarter,
-                    "nr":       parts[1] if len(parts) > 1 else "?",
-                    "customer": parts[2].replace("-", " ") if len(parts) > 2 else "?",
-                    "pdf_url":  f"/api/receipt/{quarter}/{pdf.name}",
-                    "filename": pdf.name,
-                })
+            for prefix, doc_type in (("Receipt", "receipt"), ("Invoice", "invoice")):
+                for pdf in sorted(q_dir.glob(f"{prefix}_*.pdf")):
+                    parts = pdf.stem.split("_", 2)
+                    result.append({
+                        "quarter":  quarter,
+                        "nr":       parts[1] if len(parts) > 1 else "?",
+                        "customer": parts[2].replace("-", " ") if len(parts) > 2 else "?",
+                        "pdf_url":  f"/api/receipt/{quarter}/{pdf.name}",
+                        "filename": pdf.name,
+                        "type":     doc_type,
+                    })
     return result
 
 @app.get("/api/download/{year}/{q}")
@@ -564,7 +723,8 @@ def get_config():
 
 @app.put("/api/config")
 def update_config(body: dict):
-    allowed = {"owner_name", "business_name", "address", "city", "email", "tax_note", "language"}
+    allowed = {"owner_name", "business_name", "address", "city", "email", "tax_note", "language",
+               "payee_name", "iban", "bic", "invoice_terms"}
     cfg = load_config()
     for k, v in body.items():
         if k in allowed:

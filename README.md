@@ -6,8 +6,12 @@ A self-hosted PWA + FastAPI backend for issuing receipts. Business details are c
 
 ## Features
 
-- Mobile-friendly PWA to create receipts
+- Mobile-friendly PWA to create receipts (cash) and invoices (bank transfer)
 - Auto-generated PDF with your business details
+- Invoices include an EPC QR code (Girocode) — payee, IBAN, amount and
+  invoice number prefilled for the customer's banking app
+- Separate invoice number sequence (`R2026-001`); invoices are not part of
+  the accounting export
 - Banana Buchhaltung import export (quarterly `.txt` per quarter)
 - Admin UI to manage your price list and business settings
 - Quarterly ZIP download
@@ -36,9 +40,11 @@ receiptly/
 ├── items.json           # Price list (edit via admin)
 ├── travel.json          # Travel cost €/km
 ├── counter.json         # Receipt number counter per year
+├── invoice_counter.json # Invoice number counter per year (separate sequence)
 └── 2026/
     └── Q2/
         ├── Receipt_2026-001_John-Doe.pdf
+        ├── Invoice_R2026-001_Jane-Doe.pdf
         └── Import_2026_Q2.txt
 ```
 

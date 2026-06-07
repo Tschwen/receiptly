@@ -152,7 +152,7 @@
     <div class="sum-header" data-i18n="summary_header">Summary</div>
     <div id="sum-items"></div>
     <div class="sum-total">
-      <span class="lbl" data-i18n="summary_total">Total received</span>
+      <span class="lbl" id="sum-total-label">Total received</span>
       <span class="val" id="s-total">—</span>
     </div>
   </div>
@@ -161,7 +161,7 @@
 <div class="actions">
   <button class="btn btn-secondary" onclick="resetForm()">↺</button>
   <button class="btn btn-primary" id="save-btn" onclick="submitReceipt()" disabled>
-    <span data-i18n="btn_save_receipt">Save receipt</span>
+    <span id="save-label">Save receipt</span>
   </button>
 </div>
 
@@ -239,6 +239,7 @@ async function setLanguage(lang) {
   localStorage.setItem('lang', lang);
   await loadTranslations(lang);
   applyTranslations();
+  updatePaymentTexts();
   buildList();
 }
 
@@ -273,6 +274,7 @@ window.addEventListener('load', async () => {
     (cfg.owner_name || '') + (cfg.city ? ' · ' + cfg.city : '');
 
   applyTranslations();
+  updatePaymentTexts();
   buildList();
 });
 
@@ -319,6 +321,17 @@ function setPayment(val, btn) {
   currentPayment = val;
   document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  updatePaymentTexts();
+}
+
+// Bank Transfer creates an invoice instead of a receipt — swap labels accordingly
+function isInvoice() { return currentPayment === 'Bank Transfer'; }
+
+function updatePaymentTexts() {
+  document.getElementById('save-label').textContent =
+    t(isInvoice() ? 'btn_create_invoice' : 'btn_save_receipt');
+  document.getElementById('sum-total-label').textContent =
+    t(isInvoice() ? 'summary_total_invoice' : 'summary_total');
 }
 
 function toggleTravel() {
@@ -421,15 +434,18 @@ async function submitReceipt() {
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
 
-    document.getElementById('success-nr').textContent = `${t('page_title')} ${data.receipt_nr}`;
+    const inv = data.doc_type === 'invoice';
+    document.getElementById('success-nr').textContent =
+      `${t(inv ? 'invoice_label' : 'page_title')} ${data.receipt_nr}`;
     document.getElementById('success-sub').textContent =
-      `${payload.customer} · ${data.quarter} · ${t('success_sub_suffix')}`;
+      `${payload.customer} · ${data.quarter} · ${t(inv ? 'success_sub_suffix_invoice' : 'success_sub_suffix')}`;
     document.getElementById('success-pdf-btn').onclick = () => window.open(data.pdf_url, '_blank');
     document.getElementById('success-overlay').classList.add('show');
   } catch (e) {
     toast(t('error_prefix') + e.message, true);
     btn.disabled = false;
-    btn.innerHTML = `<span data-i18n="btn_save_receipt">${t('btn_save_receipt')}</span>`;
+    btn.innerHTML = '<span id="save-label"></span>';
+    updatePaymentTexts();
   }
 }
 
@@ -437,7 +453,8 @@ function closeSuccess() {
   document.getElementById('success-overlay').classList.remove('show');
   const btn = document.getElementById('save-btn');
   btn.disabled = true;
-  btn.innerHTML = `<span data-i18n="btn_save_receipt">${t('btn_save_receipt')}</span>`;
+  btn.innerHTML = '<span id="save-label"></span>';
+  updatePaymentTexts();
   resetForm();
 }
 
