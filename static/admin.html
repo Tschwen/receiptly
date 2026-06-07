@@ -217,6 +217,11 @@ const CONFIG_FIELDS = [
   { key: 'email',         i18nKey: 'cfg_email' },
   { key: 'tax_note',      i18nKey: 'cfg_tax_note' },
   { key: 'language',      i18nKey: 'cfg_language', type: 'lang-select' },
+  // Invoice settings (bank transfer → invoice with EPC QR code)
+  { key: 'payee_name',    i18nKey: 'cfg_payee_name' },
+  { key: 'iban',          i18nKey: 'cfg_iban' },
+  { key: 'bic',           i18nKey: 'cfg_bic' },
+  { key: 'invoice_terms', i18nKey: 'cfg_invoice_terms' },
 ];
 
 let T = {};
@@ -337,11 +342,16 @@ async function saveSettings() {
   document.querySelectorAll('[data-cfg]').forEach(el => {
     updated[el.dataset.cfg] = el.value;
   });
-  await fetch('/api/config', {
+  const res = await fetch('/api/config', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updated),
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    alert(err.detail === 'Invalid IBAN (checksum or length)' ? t('alert_invalid_iban') : (err.detail || res.status));
+    return;
+  }
   configData = { ...configData, ...updated };
   document.getElementById('hdr-sub').textContent =
     (configData.owner_name || '') + ' · ' + (configData.business_name || '');
@@ -474,35 +484,20 @@ async function saveAll() {
   showBadge('saved-badge');
 }
 
-// ── Receipts list ─────────────────────────────────────────────────────────────
-function renderReceipts(receipts) {
-  _last_receipts = receipts;
-  const total = receipts.length;
-  const statsEl = document.getElementById('stats');
-  statsEl.innerHTML = `
-    <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-label">${t('stat_total_receipts')}</div></div>`;
-
-  if (total === 0) {
-    document.getElementById('content').innerHTML = `<div class="empty">${t('no_receipts')}</div>`;
-    return;
-  }
-
+// ── Receipts & invoices list ─────────────────────────────────────────────────
+function renderDocGroups(list, kind, withZip) {
   const groups = {};
-  receipts.forEach(r => {
+  list.forEach(r => {
     if (!groups[r.quarter]) groups[r.quarter] = [];
     groups[r.quarter].push(r);
   });
-  const sortedQ = Object.keys(groups).sort().reverse();
-
-  statsEl.innerHTML += `
-    <div class="stat-card"><div class="stat-val">${sortedQ.length}</div><div class="stat-label">${t('stat_quarters')}</div></div>
-    <div class="stat-card"><div class="stat-val">${sortedQ[0] || '—'}</div><div class="stat-label">${t('stat_current_quarter')}</div></div>`;
-
-  document.getElementById('content').innerHTML = sortedQ.map(quarter => {
+  return Object.keys(groups).sort().reverse().map(quarter => {
     const items = groups[quarter];
     const [year, q] = quarter.split('/');
     const count = items.length;
-    const label = count === 1 ? t('receipt_count_one') : t('receipt_count_many');
+    const label = kind === 'invoice'
+      ? (count === 1 ? t('invoice_count_one') : t('invoice_count_many'))
+      : (count === 1 ? t('receipt_count_one') : t('receipt_count_many'));
     return `
       <div class="quarter-group">
         <div class="quarter-header">
@@ -510,7 +505,7 @@ function renderReceipts(receipts) {
             <div class="quarter-title">${quarter}</div>
             <div class="quarter-meta">${count} ${label}</div>
           </div>
-          <a href="/api/download/${year}/${q}" class="zip-btn" download>↓ ZIP</a>
+          ${withZip ? `<a href="/api/download/${year}/${q}" class="zip-btn" download>↓ ZIP</a>` : ''}
         </div>
         <table>
           <thead><tr>
@@ -529,6 +524,47 @@ function renderReceipts(receipts) {
         </table>
       </div>`;
   }).join('');
+}
+
+function renderReceipts(receipts) {
+  _last_receipts = receipts;
+  // Invoices (bank transfer) live in their own section with their own counter
+  const docs = receipts.filter(r => r.type !== 'invoice');
+  const invoices = receipts.filter(r => r.type === 'invoice');
+  const statsEl = document.getElementById('stats');
+  statsEl.innerHTML = `
+    <div class="stat-card"><div class="stat-val">${docs.length}</div><div class="stat-label">${t('stat_total_receipts')}</div></div>
+    <div class="stat-card"><div class="stat-val">${invoices.length}</div><div class="stat-label">${t('stat_total_invoices')}</div></div>`;
+
+  if (receipts.length === 0) {
+    document.getElementById('content').innerHTML = `<div class="empty">${t('no_receipts')}</div>`;
+    return;
+  }
+
+  const sortedQ = [...new Set(receipts.map(r => r.quarter))].sort().reverse();
+  statsEl.innerHTML += `
+    <div class="stat-card"><div class="stat-val">${sortedQ.length}</div><div class="stat-label">${t('stat_quarters')}</div></div>
+    <div class="stat-card"><div class="stat-val">${sortedQ[0] || '—'}</div><div class="stat-label">${t('stat_current_quarter')}</div></div>`;
+
+  let html = '';
+  if (docs.length) {
+    html += `
+      <div class="quarter-header" style="border-bottom:none;margin-bottom:4px">
+        <div><div class="quarter-title">${t('receipts_section_title')}</div></div>
+      </div>`;
+    html += renderDocGroups(docs, 'receipt', true);
+  }
+  if (invoices.length) {
+    html += `
+      <div class="quarter-header" style="border-bottom:none;margin-top:36px;margin-bottom:4px">
+        <div>
+          <div class="quarter-title">${t('invoices_title')}</div>
+          <div class="quarter-meta">${t('invoices_meta')}</div>
+        </div>
+      </div>`;
+    html += renderDocGroups(invoices, 'invoice', false);
+  }
+  document.getElementById('content').innerHTML = html;
 }
 renderReceipts._last = true;
 
