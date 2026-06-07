@@ -84,6 +84,7 @@
   "cfg_iban": "IBAN (für QR-Code auf Rechnungen)",
   "cfg_bic": "BIC (optional)",
   "cfg_invoice_terms": "Zahlungshinweis (Rechnungen)",
+  "alert_invalid_iban": "Ungültige IBAN — bitte prüfen (Länge/Prüfziffer). Nicht gespeichert.",
 
   "receipt_count_one": "Quittung",
   "receipt_count_many": "Quittungen",

@@ -342,11 +342,16 @@ async function saveSettings() {
   document.querySelectorAll('[data-cfg]').forEach(el => {
     updated[el.dataset.cfg] = el.value;
   });
-  await fetch('/api/config', {
+  const res = await fetch('/api/config', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updated),
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    alert(err.detail === 'Invalid IBAN (checksum or length)' ? t('alert_invalid_iban') : (err.detail || res.status));
+    return;
+  }
   configData = { ...configData, ...updated };
   document.getElementById('hdr-sub').textContent =
     (configData.owner_name || '') + ' · ' + (configData.business_name || '');

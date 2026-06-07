@@ -242,6 +242,20 @@ def fmt_eur(val: float, language: str = "en") -> str:
         return f"{val:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
     return f"{val:,.2f} €"
 
+# ── IBAN validation (mod-97 checksum, ISO 13616) ─────────────────────────────
+IBAN_LENGTHS = {"DE": 22, "AT": 20, "CH": 21, "NL": 18, "FR": 27, "IT": 27,
+                "ES": 24, "BE": 16, "LU": 20, "PL": 28, "DK": 18}
+
+def iban_valid(iban: str) -> bool:
+    iban = iban.replace(" ", "").upper()
+    if len(iban) < 15 or not iban[:2].isalpha() or not iban[2:].isalnum():
+        return False
+    expected = IBAN_LENGTHS.get(iban[:2])
+    if expected and len(iban) != expected:
+        return False
+    rearranged = iban[4:] + iban[:4]
+    return int("".join(str(int(c, 36)) for c in rearranged)) % 97 == 1
+
 # ── EPC QR code (Girocode) for SEPA credit transfer ──────────────────────────
 def epc_qr_payload(payee: str, iban: str, bic: str, amount: float, reference: str) -> str:
     """EPC069-12 payload (Girocode) — scannable by banking apps for a SEPA transfer.
@@ -729,6 +743,10 @@ def update_config(body: dict):
     for k, v in body.items():
         if k in allowed:
             cfg[k] = str(v)
+    # Reject broken IBANs early — banking apps refuse the EPC QR otherwise.
+    iban = cfg.get("iban", "").strip()
+    if iban and not iban_valid(iban):
+        raise HTTPException(422, "Invalid IBAN (checksum or length)")
     save_config(cfg)
     return cfg
 

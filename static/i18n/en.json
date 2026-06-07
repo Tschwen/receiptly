@@ -84,6 +84,7 @@
   "cfg_iban": "IBAN (for QR code on invoices)",
   "cfg_bic": "BIC (optional)",
   "cfg_invoice_terms": "Payment terms (invoices)",
+  "alert_invalid_iban": "Invalid IBAN — please check (length/check digits). Not saved.",
 
   "receipt_count_one": "receipt",
   "receipt_count_many": "receipts",
