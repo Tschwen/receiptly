@@ -28,6 +28,9 @@
      and place a matching /i18n/<code>.json file in the static/i18n/ folder. */
   .lang-select{background:transparent;color:var(--on-header-dim);border:1px solid rgba(212,196,160,.4);border-radius:6px;padding:3px 6px;font-family:'Georgia',serif;font-size:11px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none}
   .lang-select:focus{border-color:var(--on-header-dim)}
+  .header-actions{display:flex;align-items:center;gap:10px}
+  .settings-link{color:var(--on-header-dim);border:1px solid rgba(212,196,160,.4);border-radius:6px;padding:3px 8px;font-size:11px;text-decoration:none;white-space:nowrap}
+  .settings-link:active{color:var(--on-header)}
 
   main{padding:20px 16px 110px;max-width:520px;margin:0 auto}
   .section-label{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--text);margin:22px 0 8px}
@@ -101,7 +104,10 @@
 <header>
   <div class="header-top">
     <div class="eyebrow" id="hdr-business">…</div>
-    <select id="lang-select" class="lang-select" onchange="setLanguage(this.value)"></select>
+    <div class="header-actions">
+      <a href="/admin.html" class="settings-link" data-i18n="settings_link">⚙ Settings</a>
+      <select id="lang-select" class="lang-select" onchange="setLanguage(this.value)"></select>
+    </div>
   </div>
   <h1 data-i18n="new_receipt">New Receipt</h1>
   <p class="sub" id="hdr-owner">…</p>
